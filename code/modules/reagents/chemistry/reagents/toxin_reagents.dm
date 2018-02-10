@@ -73,11 +73,13 @@
 /datum/reagent/toxin/plasma/reaction_obj(obj/O, reac_volume)
 	if((!O) || (!reac_volume))
 		return 0
-	O.atmos_spawn_air("plasma=[reac_volume];TEMP=[T20C]")
+	var/temp = holder ? holder.chem_temp : T20C
+	O.atmos_spawn_air("plasma=[reac_volume];TEMP=[temp]")
 
 /datum/reagent/toxin/plasma/reaction_turf(turf/open/T, reac_volume)
 	if(istype(T))
-		T.atmos_spawn_air("plasma=[reac_volume];TEMP=[T20C]")
+		var/temp = holder ? holder.chem_temp : T20C
+		T.atmos_spawn_air("plasma=[reac_volume];TEMP=[temp]")
 	return
 
 /datum/reagent/toxin/plasma/reaction_mob(mob/living/M, method=TOUCH, reac_volume)//Splashing people with plasma is stronger than fuel!
@@ -141,7 +143,7 @@
 	taste_description = "mint"
 
 /datum/reagent/toxin/minttoxin/on_mob_life(mob/living/M)
-	if(M.disabilities & FAT)
+	if(M.has_trait(TRAIT_FAT))
 		M.gib()
 	return ..()
 
@@ -162,18 +164,22 @@
 	toxpwr = 0.5
 	taste_description = "death"
 
-/datum/reagent/toxin/zombiepowder/on_mob_life(mob/living/carbon/M)
-	M.status_flags |= FAKEDEATH
-	M.adjustOxyLoss(0.5*REM, 0)
-	M.Weaken(5, 0)
-	M.silent = max(M.silent, 5)
-	M.tod = worldtime2text()
+/datum/reagent/toxin/zombiepowder/on_mob_add(mob/M)
 	..()
-	. = 1
+	if(isliving(M))
+		var/mob/living/L = M
+		L.fakedeath(id)
 
 /datum/reagent/toxin/zombiepowder/on_mob_delete(mob/M)
-	M.status_flags &= ~FAKEDEATH
+	if(isliving(M))
+		var/mob/living/L = M
+		L.cure_fakedeath(id)
 	..()
+
+/datum/reagent/toxin/zombiepowder/on_mob_life(mob/living/carbon/M)
+	M.adjustOxyLoss(0.5*REM, 0)
+	..()
+	. = 1
 
 /datum/reagent/toxin/mindbreaker
 	name = "Mindbreaker Toxin"
@@ -196,12 +202,12 @@
 	taste_mult = 1
 
 /datum/reagent/toxin/plantbgone/reaction_obj(obj/O, reac_volume)
-	if(istype(O,/obj/structure/alien/weeds))
+	if(istype(O, /obj/structure/alien/weeds))
 		var/obj/structure/alien/weeds/alien_weeds = O
 		alien_weeds.take_damage(rand(15,35), BRUTE, 0) // Kills alien weeds pretty fast
-	else if(istype(O,/obj/structure/glowshroom)) //even a small amount is enough to kill it
+	else if(istype(O, /obj/structure/glowshroom)) //even a small amount is enough to kill it
 		qdel(O)
-	else if(istype(O,/obj/structure/spacevine))
+	else if(istype(O, /obj/structure/spacevine))
 		var/obj/structure/spacevine/SV = O
 		SV.on_chem_effect(src)
 
@@ -242,8 +248,10 @@
 	toxpwr = 1
 
 /datum/reagent/toxin/spore/on_mob_life(mob/living/M)
-	M.damageoverlaytemp = 60
-	M.update_damage_hud()
+	if(iscarbon(M))
+		var/mob/living/carbon/C = M
+		C.damageoverlaytemp = 60
+		C.update_damage_hud()
 	M.blur_eyes(3)
 	return ..()
 
@@ -275,26 +283,30 @@
 			M.confused += 2
 			M.drowsyness += 2
 		if(10 to 50)
-			M.Sleeping(2, 0)
+			M.Sleeping(40, 0)
 			. = 1
 		if(51 to INFINITY)
-			M.Sleeping(2, 0)
+			M.Sleeping(40, 0)
 			M.adjustToxLoss((current_cycle - 50)*REM, 0)
 			. = 1
 	..()
 
-/datum/reagent/toxin/chloralhydrate/delayed
+/datum/reagent/toxin/chloralhydratedelayed
+	name = "Chloral Hydrate"
 	id = "chloralhydrate2"
+	description = "A powerful sedative that induces confusion and drowsiness before putting its target to sleep."
+	reagent_state = SOLID
+	color = "#000067" // rgb: 0, 0, 103
+	toxpwr = 0
+	metabolization_rate = 1.5 * REAGENTS_METABOLISM
 
-/datum/reagent/toxin/chloralhydrate/delayed/on_mob_life(mob/living/M)
+/datum/reagent/toxin/chloralhydratedelayed/on_mob_life(mob/living/M)
 	switch(current_cycle)
-		if(1 to 10)
-			return
 		if(10 to 20)
 			M.confused += 1
 			M.drowsyness += 1
 		if(20 to INFINITY)
-			M.Sleeping(2, 0)
+			M.Sleeping(40, 0)
 	..()
 
 /datum/reagent/toxin/beer2	//disguised as normal beer for use by emagged brobots
@@ -304,13 +316,16 @@
 	color = "#664300" // rgb: 102, 67, 0
 	metabolization_rate = 1.5 * REAGENTS_METABOLISM
 	taste_description = "piss water"
+	glass_icon_state = "beerglass"
+	glass_name = "glass of beer"
+	glass_desc = "A freezing pint of beer."
 
 /datum/reagent/toxin/beer2/on_mob_life(mob/living/M)
 	switch(current_cycle)
 		if(1 to 50)
-			M.Sleeping(2, 0)
+			M.Sleeping(40, 0)
 		if(51 to INFINITY)
-			M.Sleeping(2, 0)
+			M.Sleeping(40, 0)
 			M.adjustToxLoss((current_cycle - 50)*REM, 0)
 	return ..()
 
@@ -448,13 +463,12 @@
 	toxpwr = 0
 
 /datum/reagent/toxin/neurotoxin2/on_mob_life(mob/living/M)
-	if(M.brainloss + M.toxloss <= 60)
-		M.adjustBrainLoss(1*REM)
+	M.adjustBrainLoss(3*REM, 150)
+	. = 1
+	if(M.toxloss <= 60)
 		M.adjustToxLoss(1*REM, 0)
-		. = 1
 	if(current_cycle >= 18)
-		M.Sleeping(2, 0)
-		. = 1
+		M.Sleeping(40, 0)
 	..()
 
 /datum/reagent/toxin/cyanide
@@ -471,7 +485,7 @@
 		M.losebreath += 1
 	if(prob(8))
 		to_chat(M, "You feel horrendously weak!")
-		M.Stun(2, 0)
+		M.Stun(40, 0)
 		M.adjustToxLoss(2*REM, 0)
 	return ..()
 
@@ -531,8 +545,7 @@
 		var/picked_option = rand(1,3)
 		switch(picked_option)
 			if(1)
-				M.Stun(3, 0)
-				M.Weaken(3, 0)
+				M.Knockdown(60, 0)
 				. = 1
 			if(2)
 				M.losebreath += 10
@@ -563,7 +576,7 @@
 
 /datum/reagent/toxin/pancuronium/on_mob_life(mob/living/M)
 	if(current_cycle >= 10)
-		M.Paralyse(2, 0)
+		M.Stun(40, 0)
 		. = 1
 	if(prob(20))
 		M.losebreath += 4
@@ -580,7 +593,7 @@
 
 /datum/reagent/toxin/sodium_thiopental/on_mob_life(mob/living/M)
 	if(current_cycle >= 10)
-		M.Sleeping(2, 0)
+		M.Sleeping(40, 0)
 	M.adjustStaminaLoss(10*REM, 0)
 	..()
 	. = 1
@@ -596,7 +609,7 @@
 
 /datum/reagent/toxin/sulfonal/on_mob_life(mob/living/M)
 	if(current_cycle >= 22)
-		M.Sleeping(2, 0)
+		M.Sleeping(40, 0)
 	return ..()
 
 /datum/reagent/toxin/amanitin
@@ -610,9 +623,8 @@
 
 /datum/reagent/toxin/amanitin/on_mob_delete(mob/living/M)
 	var/toxdamage = current_cycle*3*REM
+	M.log_message("has taken [toxdamage] toxin damage from amanitin toxin", INDIVIDUAL_ATTACK_LOG)
 	M.adjustToxLoss(toxdamage)
-	if(M)
-		add_logs(M, get_turf(M), "has taken [toxdamage] toxin damage from amanitin toxin")
 	..()
 
 /datum/reagent/toxin/lipolicide
@@ -645,6 +657,34 @@
 	M.losebreath += 5
 	return ..()
 
+/datum/reagent/toxin/spewium
+	name = "Spewium"
+	id = "spewium"
+	description = "A powerful emetic, causes uncontrollable vomiting.  May result in vomiting organs at high doses."
+	reagent_state = LIQUID
+	color = "#2f6617" //A sickly green color
+	metabolization_rate = REAGENTS_METABOLISM
+	overdose_threshold = 29
+	toxpwr = 0
+	taste_description = "vomit"
+
+/datum/reagent/toxin/spewium/on_mob_life(mob/living/M)
+	.=..()
+	if(current_cycle >=11 && prob(min(50,current_cycle)) && ishuman(M))
+		var/mob/living/carbon/human/H = M
+		H.vomit(10, prob(10), prob(50), rand(0,4), TRUE, prob(30))
+		for(var/datum/reagent/toxin/R in M.reagents.reagent_list)
+			if(R != src)
+				H.reagents.remove_reagent(R.id,1)
+
+/datum/reagent/toxin/spewium/overdose_process(mob/living/M)
+	. = ..()
+	if(current_cycle >=33 && prob(15) && ishuman(M))
+		var/mob/living/carbon/human/H = M
+		H.spew_organ()
+		H.vomit(0, TRUE, TRUE, 4)
+		to_chat(H, "<span class='userdanger'>You feel something lumpy come up as you vomit.</span>")
+
 /datum/reagent/toxin/curare
 	name = "Curare"
 	id = "curare"
@@ -656,7 +696,7 @@
 
 /datum/reagent/toxin/curare/on_mob_life(mob/living/M)
 	if(current_cycle >= 11)
-		M.Weaken(3, 0)
+		M.Knockdown(60, 0)
 	M.adjustOxyLoss(1*REM, 0)
 	. = 1
 	..()
@@ -784,7 +824,7 @@
 	C.acid_act(acidpwr, reac_volume)
 
 /datum/reagent/toxin/acid/reaction_obj(obj/O, reac_volume)
-	if(istype(O.loc, /mob)) //handled in human acid_act()
+	if(ismob(O.loc)) //handled in human acid_act()
 		return
 	reac_volume = round(reac_volume,0.1)
 	O.acid_act(acidpwr, reac_volume)
@@ -798,7 +838,7 @@
 /datum/reagent/toxin/acid/fluacid
 	name = "Fluorosulfuric acid"
 	id = "facid"
-	description = "Fluorosulfuric acid is a an extremely corrosive chemical substance."
+	description = "Fluorosulfuric acid is an extremely corrosive chemical substance."
 	color = "#5050FF"
 	toxpwr = 2
 	acidpwr = 42.0
@@ -818,9 +858,9 @@
 
 /datum/reagent/toxin/peaceborg/confuse/on_mob_life(mob/living/M)
 	if(M.confused < 6)
-		M.confused = Clamp(M.confused + 3, 0, 5)
+		M.confused = CLAMP(M.confused + 3, 0, 5)
 	if(M.dizziness < 6)
-		M.dizziness = Clamp(M.dizziness + 3, 0, 5)
+		M.dizziness = CLAMP(M.dizziness + 3, 0, 5)
 	if(prob(20))
 		to_chat(M, "You feel confused and disorientated.")
 	..()
@@ -857,7 +897,7 @@
 		holder.remove_reagent(id, actual_metaboliztion_rate * M.metabolism_efficiency)
 		M.adjustToxLoss(actual_toxpwr*REM, 0)
 		if(prob(10))
-			M.Weaken(1, 0)
+			M.Knockdown(20, 0)
 		. = 1
 	..()
 

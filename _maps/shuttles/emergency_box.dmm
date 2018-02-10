@@ -1,23 +1,15 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "aa" = (
-/turf/open/space,
-/area/space)
-"ab" = (
-/turf/closed/wall/mineral/titanium/overspace,
-/area/shuttle/escape)
+/turf/template_noop,
+/area/template_noop)
 "ac" = (
-/obj/structure/grille,
-/obj/structure/window/shuttle,
+/obj/effect/spawner/structure/window/shuttle,
 /turf/open/floor/plating,
 /area/shuttle/escape)
 "ad" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall_s10";
-	dir = 2
-	},
+/turf/closed/wall/mineral/titanium,
 /area/shuttle/escape)
 "ae" = (
-/turf/open/floor/mineral/titanium,
 /turf/closed/wall/mineral/titanium/interior,
 /area/shuttle/escape)
 "af" = (
@@ -37,25 +29,18 @@
 /area/shuttle/escape)
 "ai" = (
 /obj/structure/table,
-/obj/item/weapon/storage/firstaid/regular{
+/obj/item/storage/firstaid/regular{
 	pixel_x = 2;
 	pixel_y = 3
 	},
-/obj/item/weapon/crowbar,
-/obj/item/weapon/storage/firstaid/fire,
+/obj/item/crowbar,
+/obj/item/storage/firstaid/fire,
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
-"aj" = (
-/turf/open/floor/plasteel/shuttle/white,
-/turf/closed/wall/shuttle/interior{
-	icon_state = "swall_f5"
-	},
-/area/shuttle/escape)
-"ak" = (
-/turf/closed/wall/mineral/titanium,
-/area/shuttle/escape)
 "al" = (
-/obj/machinery/computer/atmos_alert,
+/obj/machinery/computer/atmos_alert{
+	dir = 4
+	},
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
 "am" = (
@@ -74,11 +59,15 @@
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/escape)
 "ap" = (
-/obj/machinery/computer/security,
+/obj/machinery/computer/security{
+	dir = 8
+	},
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
 "aq" = (
-/obj/machinery/computer/crew,
+/obj/machinery/computer/crew{
+	dir = 4
+	},
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
 "ar" = (
@@ -86,7 +75,6 @@
 	dir = 8
 	},
 /obj/structure/extinguisher_cabinet{
-	pixel_x = 0;
 	pixel_y = -30
 	},
 /turf/open/floor/mineral/titanium/blue,
@@ -94,7 +82,6 @@
 "as" = (
 /obj/item/device/radio/intercom{
 	name = "Station Intercom (General)";
-	pixel_x = 0;
 	pixel_y = -29
 	},
 /turf/open/floor/mineral/titanium/blue,
@@ -109,29 +96,13 @@
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/escape)
 "au" = (
-/obj/machinery/computer/communications,
+/obj/machinery/computer/communications{
+	dir = 8
+	},
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
-"av" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall13";
-	dir = 2
-	},
-/area/shuttle/escape)
-"aw" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall12";
-	dir = 2
-	},
-/area/shuttle/escape)
-"ax" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall14";
-	dir = 2
-	},
-/area/shuttle/escape)
 "ay" = (
-/obj/machinery/door/airlock/glass{
+/obj/machinery/door/airlock/public/glass{
 	name = "Emergency Shuttle Cockpit";
 	req_access_txt = "19"
 	},
@@ -165,12 +136,12 @@
 /area/shuttle/escape)
 "aE" = (
 /obj/structure/table,
-/obj/item/weapon/storage/firstaid/fire,
-/obj/item/weapon/storage/firstaid/regular{
+/obj/item/storage/firstaid/fire,
+/obj/item/storage/firstaid/regular{
 	pixel_x = 2;
 	pixel_y = 3
 	},
-/obj/item/weapon/crowbar,
+/obj/item/crowbar,
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
 "aF" = (
@@ -194,7 +165,7 @@
 /turf/open/floor/mineral/plastitanium/brig,
 /area/shuttle/escape)
 "aH" = (
-/obj/machinery/door/airlock/glass{
+/obj/machinery/door/airlock/public/glass{
 	name = "Emergency Shuttle Brig";
 	req_access_txt = "2"
 	},
@@ -227,25 +198,13 @@
 /obj/structure/table,
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
-"aN" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall7";
-	dir = 2
-	},
-/area/shuttle/escape)
-"aO" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swallc4";
-	dir = 2
-	},
-/area/shuttle/escape)
 "aP" = (
 /obj/machinery/door/airlock/titanium{
 	name = "Emergency Shuttle Airlock"
 	},
 /obj/docking_port/mobile/emergency{
 	name = "Box emergency shuttle";
-	timid = 0
+	timid = 1
 	},
 /turf/open/floor/plating,
 /area/shuttle/escape)
@@ -258,8 +217,7 @@
 /area/shuttle/escape)
 "aR" = (
 /obj/structure/extinguisher_cabinet{
-	pixel_x = 27;
-	pixel_y = 0
+	pixel_x = 27
 	},
 /obj/machinery/light/small{
 	dir = 4
@@ -298,7 +256,6 @@
 /area/shuttle/escape)
 "aW" = (
 /obj/structure/extinguisher_cabinet{
-	pixel_x = 0;
 	pixel_y = -30
 	},
 /turf/open/floor/mineral/titanium/blue,
@@ -309,53 +266,37 @@
 	},
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/escape)
-"aY" = (
-/obj/machinery/status_display,
-/turf/closed/wall/shuttle{
-	icon_state = "swall14";
-	dir = 2
-	},
-/area/shuttle/escape)
 "aZ" = (
-/obj/machinery/door/airlock/glass{
+/obj/machinery/door/airlock/public/glass{
 	name = "Emergency Shuttle Infirmary"
 	},
 /turf/open/floor/mineral/titanium/blue,
-/area/shuttle/escape)
-"ba" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall11";
-	dir = 2
-	},
 /area/shuttle/escape)
 "bb" = (
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "bc" = (
 /obj/structure/extinguisher_cabinet{
-	pixel_x = 27;
-	pixel_y = 0
+	pixel_x = 27
 	},
 /turf/open/floor/mineral/titanium/yellow,
 /area/shuttle/escape)
 "bd" = (
 /obj/machinery/sleeper{
-	icon_state = "sleeper-open";
 	dir = 8
 	},
 /turf/open/floor/mineral/titanium,
 /area/shuttle/escape)
 "be" = (
 /obj/structure/table,
-/obj/item/weapon/storage/firstaid/fire,
-/obj/item/weapon/storage/firstaid/regular{
+/obj/item/storage/firstaid/fire,
+/obj/item/storage/firstaid/regular{
 	pixel_x = 2;
 	pixel_y = 3
 	},
-/obj/item/weapon/crowbar,
+/obj/item/crowbar,
 /obj/structure/extinguisher_cabinet{
-	pixel_x = 27;
-	pixel_y = 0
+	pixel_x = 27
 	},
 /obj/machinery/light/small{
 	dir = 4
@@ -369,12 +310,6 @@
 "bg" = (
 /obj/structure/closet/crate,
 /turf/open/floor/mineral/titanium/yellow,
-/area/shuttle/escape)
-"bh" = (
-/turf/closed/wall/shuttle{
-	icon_state = "swall_s5";
-	dir = 2
-	},
 /area/shuttle/escape)
 "bi" = (
 /obj/structure/window/reinforced{
@@ -399,7 +334,6 @@
 "bm" = (
 /obj/structure/table,
 /obj/machinery/light{
-	icon_state = "tube1";
 	dir = 8
 	},
 /turf/open/floor/mineral/titanium,
@@ -444,35 +378,35 @@ aa
 aa
 aa
 aa
-ak
-ak
-ak
+ad
+ad
+ad
 aI
-ak
+ad
 aP
-ak
+ad
 ac
 ac
 ac
-ak
+ad
 aV
-ak
+ad
 aV
-ak
-ak
-ak
+ad
+ad
+ad
 aa
 "}
 (2,1,1) = {"
 aa
-ak
-ak
-ak
-ak
+ad
+ad
+ad
+ad
 aA
 aF
 aG
-ak
+ad
 bn
 aL
 aL
@@ -480,23 +414,23 @@ aL
 aL
 aL
 bo
-ak
+ad
 bb
 bq
 bf
-ak
-ak
+ad
+ad
 "}
 (3,1,1) = {"
-ak
+ad
 ae
 al
 aq
-ak
+ad
 aA
 aG
 aJ
-ak
+ad
 aQ
 an
 an
@@ -504,7 +438,7 @@ an
 an
 an
 aW
-ak
+ad
 bb
 bb
 bf
@@ -516,11 +450,11 @@ ac
 af
 am
 ar
-ak
+ad
 aA
 aG
 aJ
-ak
+ad
 an
 aS
 aS
@@ -540,7 +474,7 @@ ac
 ag
 an
 as
-ak
+ad
 ac
 aH
 ac
@@ -552,7 +486,7 @@ aT
 aT
 aT
 an
-ak
+ad
 bc
 br
 bg
@@ -564,7 +498,7 @@ ac
 ah
 an
 at
-ak
+ad
 aB
 an
 aK
@@ -577,9 +511,9 @@ an
 an
 bp
 az
-ak
-ak
-ak
+ad
+ad
+ad
 bi
 bk
 "}
@@ -632,11 +566,11 @@ bi
 bk
 "}
 (9,1,1) = {"
-ak
+ad
 ae
 ap
 au
-ak
+ad
 aD
 an
 an
@@ -657,10 +591,10 @@ bk
 "}
 (10,1,1) = {"
 aa
-ak
-ak
-ak
-ak
+ad
+ad
+ad
+ad
 aE
 bl
 aC
@@ -676,30 +610,30 @@ ac
 bd
 be
 bd
-ak
-ak
+ad
+ad
 "}
 (11,1,1) = {"
 aa
 aa
 aa
 aa
-ak
+ad
 ac
-ak
+ad
 ac
-ak
-ak
-ak
+ad
+ad
+ad
 ac
 ac
 ac
-ak
-ak
-ak
+ad
+ad
+ad
 ac
-ak
+ad
 ac
-ak
+ad
 aa
 "}

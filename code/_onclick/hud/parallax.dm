@@ -11,15 +11,17 @@
 	var/parallax_layers_max = 3
 	var/parallax_animate_timer
 
-/datum/hud/proc/create_parallax()
-	var/client/C = mymob.client
-	if (!apply_parallax_pref())
+/datum/hud/proc/create_parallax(mob/viewmob)
+	var/mob/screenmob = viewmob || mymob
+	var/client/C = screenmob.client
+	if (!apply_parallax_pref(viewmob)) //don't want shit computers to crash when specing someone with insane parallax, so use the viewer's pref
 		return
 
 	if(!length(C.parallax_layers_cached))
 		C.parallax_layers_cached = list()
 		C.parallax_layers_cached += new /obj/screen/parallax_layer/layer_1(null, C.view)
 		C.parallax_layers_cached += new /obj/screen/parallax_layer/layer_2(null, C.view)
+		C.parallax_layers_cached += new /obj/screen/parallax_layer/layer_3(null, C.view)
 
 	C.parallax_layers = C.parallax_layers_cached.Copy()
 
@@ -27,7 +29,10 @@
 		C.parallax_layers.len = C.parallax_layers_max
 
 	C.screen |= (C.parallax_layers)
-	var/obj/screen/plane_master/PM = plane_masters["[PLANE_SPACE]"]
+	var/obj/screen/plane_master/PM = screenmob.hud_used.plane_masters["[PLANE_SPACE]"]
+	if(screenmob != mymob)
+		C.screen -= locate(/obj/screen/plane_master/parallax_white) in C.screen
+		C.screen += PM
 	PM.color = list(
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -37,21 +42,24 @@
 		)
 
 
-/datum/hud/proc/remove_parallax()
-	var/client/C = mymob.client
+/datum/hud/proc/remove_parallax(mob/viewmob)
+	var/mob/screenmob = viewmob || mymob
+	var/client/C = screenmob.client
 	C.screen -= (C.parallax_layers_cached)
-	var/obj/screen/plane_master/PM = plane_masters["[PLANE_SPACE]"]
+	var/obj/screen/plane_master/PM = screenmob.hud_used.plane_masters["[PLANE_SPACE]"]
+	if(screenmob != mymob)
+		C.screen -= locate(/obj/screen/plane_master/parallax_white) in C.screen
+		C.screen += PM
 	PM.color = initial(PM.color)
 	C.parallax_layers = null
 
-/datum/hud/proc/apply_parallax_pref()
-	var/client/C = mymob.client
+/datum/hud/proc/apply_parallax_pref(mob/viewmob)
+	var/mob/screenmob = viewmob || mymob
+	var/client/C = screenmob.client
 	if(C.prefs)
 		var/pref = C.prefs.parallax
 		if (isnull(pref))
 			pref = PARALLAX_HIGH
-			if (C.byond_version < 511)
-				pref = PARALLAX_DISABLE
 		switch(C.prefs.parallax)
 			if (PARALLAX_INSANE)
 				C.parallax_throttle = FALSE
@@ -75,9 +83,9 @@
 	C.parallax_layers_max = 3
 	return TRUE
 
-/datum/hud/proc/update_parallax_pref()
-	remove_parallax()
-	create_parallax()
+/datum/hud/proc/update_parallax_pref(mob/viewmob)
+	remove_parallax(viewmob)
+	create_parallax(viewmob)
 
 // This sets which way the current shuttle is moving (returns true if the shuttle has stopped moving so the caller can append their animation)
 /datum/hud/proc/set_parallax_movedir(new_parallax_movedir, skip_windups)
@@ -233,11 +241,11 @@
 	blend_mode = BLEND_ADD
 	plane = PLANE_SPACE_PARALLAX
 	screen_loc = "CENTER-7,CENTER-7"
-	mouse_opacity = 0
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 
 
 /obj/screen/parallax_layer/Initialize(mapload, view)
-	..()
+	. = ..()
 	if (!view)
 		view = world.view
 	update_o(view)
@@ -245,16 +253,18 @@
 /obj/screen/parallax_layer/proc/update_o(view)
 	if (!view)
 		view = world.view
-
-	var/count = Ceiling(view/(480/world.icon_size))+1
+	
+	var/list/viewscales = getviewsize(view)
+	var/countx = CEILING((viewscales[1]/2)/(480/world.icon_size), 1)+1
+	var/county = CEILING((viewscales[2]/2)/(480/world.icon_size), 1)+1
 	var/list/new_overlays = new
-	for(var/x in -count to count)
-		for(var/y in -count to count)
+	for(var/x in -countx to countx)
+		for(var/y in -county to county)
 			if(x == 0 && y == 0)
 				continue
-			var/image/I = image(icon, null, icon_state)
-			I.transform = matrix(1, 0, x*480, 0, 1, y*480)
-			new_overlays += I
+			var/mutable_appearance/texture_overlay = mutable_appearance(icon, icon_state)
+			texture_overlay.transform = matrix(1, 0, x*480, 0, 1, y*480)
+			new_overlays += texture_overlay
 	cut_overlays()
 	add_overlay(new_overlays)
 	view_sized = view
@@ -268,6 +278,11 @@
 	icon_state = "layer2"
 	speed = 1
 	layer = 2
+
+/obj/screen/parallax_layer/layer_3
+	icon_state = "layer3"
+	speed = 1.4
+	layer = 3
 
 #undef LOOP_NONE
 #undef LOOP_NORMAL

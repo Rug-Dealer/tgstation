@@ -4,7 +4,6 @@
 	actions_types = list(/datum/action/item_action/toggle_hood)
 	var/obj/item/clothing/head/hooded/hood
 	var/hoodtype = /obj/item/clothing/head/hooded/winterhood //so the chaplain hoodie or other hoodies can override this
-	hooded = 1
 
 /obj/item/clothing/suit/hooded/New()
 	MakeHood()
@@ -35,7 +34,7 @@
 
 /obj/item/clothing/suit/hooded/proc/RemoveHood()
 	src.icon_state = "[initial(icon_state)]"
-	suittoggled = 0
+	suittoggled = FALSE
 	if(ishuman(hood.loc))
 		var/mob/living/carbon/H = hood.loc
 		H.transferItemToLoc(hood, src, TRUE)
@@ -61,7 +60,7 @@
 				to_chat(H, "<span class='warning'>You're already wearing something on your head!</span>")
 				return
 			else if(H.equip_to_slot_if_possible(hood,slot_head,0,0,1))
-				suittoggled = 1
+				suittoggled = TRUE
 				src.icon_state = "[initial(icon_state)]_t"
 				H.update_inv_wear_suit()
 				for(var/X in actions)
@@ -112,10 +111,10 @@
 	to_chat(usr, "<span class='notice'>You toggle [src]'s [togglename].</span>")
 	if(src.suittoggled)
 		src.icon_state = "[initial(icon_state)]"
-		src.suittoggled = 0
+		src.suittoggled = FALSE
 	else if(!src.suittoggled)
 		src.icon_state = "[initial(icon_state)]_t"
-		src.suittoggled = 1
+		src.suittoggled = TRUE
 	usr.update_inv_wear_suit()
 	for(var/X in actions)
 		var/datum/action/A = X
@@ -126,9 +125,9 @@
 	to_chat(user, "Alt-click on [src] to toggle the [togglename].")
 
 //Hardsuit toggle code
-/obj/item/clothing/suit/space/hardsuit/New()
+/obj/item/clothing/suit/space/hardsuit/Initialize()
 	MakeHelmet()
-	..()
+	. = ..()
 
 /obj/item/clothing/suit/space/hardsuit/Destroy()
 	if(helmet)
@@ -164,7 +163,7 @@
 /obj/item/clothing/suit/space/hardsuit/proc/RemoveHelmet()
 	if(!helmet)
 		return
-	suittoggled = 0
+	suittoggled = FALSE
 	if(ishuman(helmet.loc))
 		var/mob/living/carbon/H = helmet.loc
 		if(helmet.on)
@@ -196,7 +195,7 @@
 				return
 			else if(H.equip_to_slot_if_possible(helmet,slot_head,0,0,1))
 				to_chat(H, "<span class='notice'>You engage the helmet on the hardsuit.</span>")
-				suittoggled = 1
+				suittoggled = TRUE
 				H.update_inv_wear_suit()
 				playsound(src.loc, 'sound/mecha/mechmove03.ogg', 50, 1)
 	else

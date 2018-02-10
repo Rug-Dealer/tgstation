@@ -8,8 +8,10 @@
 # NOTE: syntax was changed to allow hyphenation of ranknames, since spaces are stripped.      #
 ###############################################################################################
 Optimumtact = Host
+NewSta = Game Master
+Expletives = Game Master
 kingofkosmos = Game Master
-MrStonedOne = Game Master
+MrStonedOne = Lazy Master
 microscopics = Game Master
 Gun Hog = Game Master
 KorPhaeron = Game Master
@@ -127,3 +129,6 @@ Sweaterkittens = Game Master
 Feemjmeem = Game Master
 JStheguy = Game Master
 excessiveuseofcobby = Game Master
+Plizzard = Game Master
+octareenroon91 = Game Master
+Serpentarium = Game Master

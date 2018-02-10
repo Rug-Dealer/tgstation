@@ -68,12 +68,19 @@
 	using.screen_loc = ui_ghost_pai
 	static_inventory += using
 
+	using = new /obj/screen/language_menu
+	using.icon = ui_style
+	static_inventory += using
+
 /datum/hud/ghost/show_hud(version = 0, mob/viewmob)
-	..()
-	if(!mymob.client.prefs.ghost_hud)
-		mymob.client.screen -= static_inventory
+	. = ..()
+	if(!.)
+		return
+	var/mob/screenmob = viewmob || mymob
+	if(!screenmob.client.prefs.ghost_hud)
+		screenmob.client.screen -= static_inventory
 	else
-		mymob.client.screen += static_inventory
+		screenmob.client.screen += static_inventory
 
 /mob/dead/observer/create_mob_hud()
 	if(client && !hud_used)

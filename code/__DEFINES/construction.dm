@@ -23,6 +23,11 @@
 #define WINDOW_IN_FRAME 1
 #define WINDOW_SCREWED_TO_FRAME 2
 
+//airlock assembly construction states
+#define AIRLOCK_ASSEMBLY_NEEDS_WIRES 0
+#define AIRLOCK_ASSEMBLY_NEEDS_ELECTRONICS 1
+#define AIRLOCK_ASSEMBLY_NEEDS_SCREWDRIVER 2
+
 //plastic flaps construction states
 #define PLASTIC_FLAPS_NORMAL 0
 #define PLASTIC_FLAPS_DETACHED 1
@@ -60,6 +65,12 @@
 #define GEAR_SECURE 1
 #define GEAR_LOOSE 2
 
+//floodlights because apparently we use defines now
+#define FLOODLIGHT_NEEDS_WIRES 0
+#define FLOODLIGHT_NEEDS_LIGHTS 1
+#define FLOODLIGHT_NEEDS_SECURING 2
+#define FLOODLIGHT_NEEDS_WRENCHING 3
+
 //other construction-related things
 
 //windows affected by nar-sie turn this color.
@@ -89,11 +100,14 @@
 
 //tablecrafting defines
 #define CAT_NONE	""
-#define CAT_WEAPON	"Weaponry"
+#define CAT_WEAPONRY	"Weaponry"
+#define CAT_WEAPON	"Weapons"
 #define CAT_AMMO	"Ammunition"
 #define CAT_ROBOT	"Robots"
 #define CAT_MISC	"Misc"
 #define CAT_PRIMAL  "Tribal"
+#define CAT_CLOTHING	"Clothing"
+#define CAT_FOOD	"Foods"
 #define CAT_BREAD	"Breads"
 #define CAT_BURGER	"Burgers"
 #define CAT_CAKE	"Cakes"
