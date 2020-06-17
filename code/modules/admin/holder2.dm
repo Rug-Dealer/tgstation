@@ -1,5 +1,7 @@
 GLOBAL_LIST_EMPTY(admin_datums)
 GLOBAL_PROTECT(admin_datums)
+GLOBAL_LIST_EMPTY(protected_admins)
+GLOBAL_PROTECT(protected_admins)
 
 GLOBAL_VAR_INIT(href_token, GenerateToken())
 GLOBAL_PROTECT(href_token)
@@ -26,7 +28,7 @@ GLOBAL_PROTECT(href_token)
 
 	var/deadmined
 
-/datum/admins/New(datum/admin_rank/R, ckey, force_active = FALSE)
+/datum/admins/New(datum/admin_rank/R, ckey, force_active = FALSE, protected)
 	if(IsAdminAdvancedProcCall())
 		var/msg = " has tried to elevate permissions!"
 		message_admins("[key_name_admin(usr)][msg]")
@@ -37,12 +39,10 @@ GLOBAL_PROTECT(href_token)
 		return
 	if(!ckey)
 		QDEL_IN(src, 0)
-		throw EXCEPTION("Admin datum created without a ckey")
-		return
+		CRASH("Admin datum created without a ckey")
 	if(!istype(R))
 		QDEL_IN(src, 0)
-		throw EXCEPTION("Admin datum created without a rank")
-		return
+		CRASH("Admin datum created without a rank")
 	target = ckey
 	name = "[ckey]'s admin datum ([R])"
 	rank = R
@@ -51,7 +51,9 @@ GLOBAL_PROTECT(href_token)
 	if(R.rights & R_DEBUG) //grant profile access
 		world.SetConfig("APP/admin", ckey, "role=admin")
 	//only admins with +ADMIN start admined
-	if (force_active || (R.rights & R_AUTOLOGIN))
+	if(protected)
+		GLOB.protected_admins[target] = src
+	if (force_active || (R.rights & R_AUTOADMIN))
 		activate()
 	else
 		deactivate()
@@ -133,7 +135,7 @@ GLOBAL_PROTECT(href_token)
 /datum/admins/proc/check_if_greater_rights_than_holder(datum/admins/other)
 	if(!other)
 		return 1 //they have no rights
-	if(rank.rights == 65535)
+	if(rank.rights == R_EVERYTHING)
 		return 1 //we have all the rights
 	if(src == other)
 		return 1 //you always have more rights than yourself
@@ -154,7 +156,7 @@ generally it would be used like so:
 /proc/admin_proc()
 	if(!check_rights(R_ADMIN))
 		return
-	to_chat(world, "you have enough rights!")
+	to_chat(world, "you have enough rights!", confidential = TRUE)
 
 NOTE: it checks usr! not src! So if you're checking somebody's rank in a proc which they did not call
 you will have to do something like if(client.rights & R_ADMIN) yourself.
@@ -165,7 +167,7 @@ you will have to do something like if(client.rights & R_ADMIN) yourself.
 			return 1
 		else
 			if(show_msg)
-				to_chat(usr, "<font color='red'>Error: You do not have sufficient rights to do that. You require one of the following flags:[rights2text(rights_required," ")].</font>")
+				to_chat(usr, "<font color='red'>Error: You do not have sufficient rights to do that. You require one of the following flags:[rights2text(rights_required," ")].</font>", confidential = TRUE)
 	return 0
 
 //probably a bit iffy - will hopefully figure out a better solution

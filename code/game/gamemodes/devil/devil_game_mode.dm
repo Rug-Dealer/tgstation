@@ -1,9 +1,10 @@
 /datum/game_mode/devil
 	name = "devil"
 	config_tag = "devil"
+	report_type = "devil"
 	antag_flag = ROLE_DEVIL
 	false_report_weight = 1
-	protected_jobs = list("Lawyer", "Curator", "Chaplain", "Head of Security", "Captain", "AI")
+	protected_jobs = list("Prisoner", "Lawyer", "Curator", "Chaplain", "Head of Security", "Captain", "AI")
 	required_players = 0
 	required_enemies = 1
 	recommended_enemies = 4
@@ -36,24 +37,27 @@
 	for(var/j = 0, j < num_devils, j++)
 		if (!antag_candidates.len)
 			break
-		var/datum/mind/devil = pick(antag_candidates)
+		var/datum/mind/devil = antag_pick(antag_candidates)
 		devils += devil
 		devil.special_role = traitor_name
 		devil.restricted_roles = restricted_jobs
 
-		log_game("[devil.key] (ckey) has been selected as a [traitor_name]")
+		log_game("[key_name(devil)] has been selected as a [traitor_name]")
 		antag_candidates.Remove(devil)
 
 	if(devils.len < required_enemies)
-		return 0
-	return 1
+		setup_error = "Not enough devil candidates"
+		return FALSE
+	for(var/antag in devils)
+		GLOB.pre_setup_antags += antag
+	return TRUE
 
 
 /datum/game_mode/devil/post_setup()
 	for(var/datum/mind/devil in devils)
 		post_setup_finalize(devil)
 	..()
-	return 1
+	return TRUE
 
 /datum/game_mode/devil/generate_report()
 	return "Infernal creatures have been seen nearby offering great boons in exchange for souls.  This is considered theft against Nanotrasen, as all employment contracts contain a lien on the \
@@ -61,6 +65,7 @@
 
 /datum/game_mode/devil/proc/post_setup_finalize(datum/mind/devil)
 	add_devil(devil.current, ascendable = TRUE) //Devil gamemode devils are ascendable.
+	GLOB.pre_setup_antags -= devil
 	add_devil_objectives(devil,2)
 
 /proc/is_devil(mob/living/M)

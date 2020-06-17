@@ -1,5 +1,9 @@
+/obj/item/modular_computer/attack_self(mob/user)
+	. = ..()
+	ui_interact(user)
+
 // Operates TGUI
-/obj/item/device/modular_computer/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
+/obj/item/modular_computer/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
 	if(!enabled)
 		if(ui)
 			ui.close()
@@ -33,13 +37,14 @@
 	if (!ui)
 		var/datum/asset/assets = get_asset_datum(/datum/asset/simple/headers)
 		assets.send(user)
-
-		ui = new(user, src, ui_key, "ntos_main", "NTOS Main menu", 400, 500, master_ui, state)
+		assets = get_asset_datum(/datum/asset/simple/arcade)
+		assets.send(user)
+		ui = new(user, src, ui_key, "NtosMain", "NtOS Main menu", 400, 500, master_ui, state)
 		ui.open()
 		ui.set_autoupdate(state = 1)
 
 
-/obj/item/device/modular_computer/ui_data(mob/user)
+/obj/item/modular_computer/ui_data(mob/user)
 	var/list/data = get_header_data()
 	data["programs"] = list()
 	var/obj/item/computer_hardware/hard_drive/hard_drive = all_components[MC_HDD]
@@ -57,17 +62,17 @@
 
 
 // Handles user's GUI input
-/obj/item/device/modular_computer/ui_act(action, params)
+/obj/item/modular_computer/ui_act(action, params)
 	if(..())
 		return
 	var/obj/item/computer_hardware/hard_drive/hard_drive = all_components[MC_HDD]
 	switch(action)
 		if("PC_exit")
 			kill_program()
-			return 1
+			return TRUE
 		if("PC_shutdown")
 			shutdown_computer()
-			return 1
+			return TRUE
 		if("PC_minimize")
 			var/mob/user = usr
 			if(!active_program || !all_components[MC_CPU])
@@ -138,6 +143,7 @@
 				set_light(comp_light_luminosity, 1, comp_light_color)
 			else
 				set_light(0)
+			return TRUE
 
 		if("PC_light_color")
 			var/mob/user = usr
@@ -152,10 +158,11 @@
 			comp_light_color = new_color
 			light_color = new_color
 			update_light()
+			return TRUE
 		else
 			return
 
-/obj/item/device/modular_computer/ui_host()
+/obj/item/modular_computer/ui_host()
 	if(physical)
 		return physical
 	return src

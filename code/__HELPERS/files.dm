@@ -1,9 +1,16 @@
 //Sends resource files to client cache
-/client/proc/getFiles()
+/client/proc/getFiles(...)
 	for(var/file in args)
 		src << browse_rsc(file)
 
-/client/proc/browse_files(root="data/logs/", max_iterations=10, list/valid_extensions=list("txt","log","htm", "html"))
+/client/proc/browse_files(root_type=BROWSE_ROOT_ALL_LOGS, max_iterations=10, list/valid_extensions=list("txt","log","htm", "html"))
+	// wow why was this ever a parameter
+	var/root = "data/logs/"
+	switch(root_type)
+		if(BROWSE_ROOT_ALL_LOGS)
+			root = "data/logs/"
+		if(BROWSE_ROOT_CURRENT_LOGS)
+			root = "[GLOB.log_directory]/"
 	var/path = root
 
 	for(var/i=0, i<max_iterations, i++)
@@ -11,7 +18,7 @@
 		if(path != root)
 			choices.Insert(1,"/")
 
-		var/choice = input(src,"Choose a file to access:","Download",null) as null|anything in choices
+		var/choice = input(src,"Choose a file to access:","Download",null) as null|anything in sortList(choices)
 		switch(choice)
 			if(null)
 				return
@@ -20,7 +27,7 @@
 				continue
 		path += choice
 
-		if(copytext(path,-1,0) != "/")		//didn't choose a directory, no need to iterate again
+		if(copytext_char(path, -1) != "/")		//didn't choose a directory, no need to iterate again
 			break
 	var/extensions
 	for(var/i in valid_extensions)
@@ -35,6 +42,7 @@
 	return path
 
 #define FTPDELAY 200	//200 tick delay to discourage spam
+#define ADMIN_FTPDELAY_MODIFIER 0.5		//Admins get to spam files faster since we ~trust~ them!
 /*	This proc is a failsafe to prevent spamming of file requests.
 	It is just a timer that only permits a download every [FTPDELAY] ticks.
 	This can be changed by modifying FTPDELAY's value above.
@@ -45,9 +53,13 @@
 	if(time_to_wait > 0)
 		to_chat(src, "<font color='red'>Error: file_spam_check(): Spam. Please wait [DisplayTimeText(time_to_wait)].</font>")
 		return 1
-	GLOB.fileaccess_timer = world.time + FTPDELAY
+	var/delay = FTPDELAY
+	if(holder)
+		delay *= ADMIN_FTPDELAY_MODIFIER
+	GLOB.fileaccess_timer = world.time + delay
 	return 0
 #undef FTPDELAY
+#undef ADMIN_FTPDELAY_MODIFIER
 
 /proc/pathwalk(path)
 	var/list/jobs = list(path)

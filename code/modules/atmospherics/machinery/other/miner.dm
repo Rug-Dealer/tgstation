@@ -10,7 +10,6 @@
 	desc = "Gasses mined from the gas giant below (above?) flow out through this massive vent."
 	icon = 'icons/obj/atmospherics/components/miners.dmi'
 	icon_state = "miner"
-	anchored = TRUE
 	density = FALSE
 	resistance_flags = INDESTRUCTIBLE|ACID_PROOF|FIRE_PROOF
 	var/spawn_id = null
@@ -34,9 +33,9 @@
 	set_active(active)				//Force overlay update.
 
 /obj/machinery/atmospherics/miner/examine(mob/user)
-	..()
+	. = ..()
 	if(broken)
-		to_chat(user, "Its debug output is printing \"[broken_message]\".")
+		. += {"Its debug output is printing "[broken_message]"."}
 
 /obj/machinery/atmospherics/miner/proc/check_operation()
 	if(!active)
@@ -109,14 +108,14 @@
 		return TRUE
 	return FALSE
 
-/obj/machinery/atmospherics/miner/update_icon()
-	cut_overlays()
+/obj/machinery/atmospherics/miner/update_overlays()
+	. = ..()
 	if(broken)
-		add_overlay("broken")
+		. += "broken"
 	else if(active)
 		var/mutable_appearance/on_overlay = mutable_appearance(icon, "on")
 		on_overlay.color = overlay_color
-		add_overlay(on_overlay)
+		. += on_overlay
 
 /obj/machinery/atmospherics/miner/process()
 	update_power()
@@ -136,7 +135,7 @@
 	merger.gases[spawn_id][MOLES] = (spawn_mol)
 	merger.temperature = spawn_temp
 	O.assume_air(merger)
-	SSair.add_to_active(O)
+	O.air_update_turf(TRUE)
 
 /obj/machinery/atmospherics/miner/attack_ai(mob/living/silicon/user)
 	if(broken)

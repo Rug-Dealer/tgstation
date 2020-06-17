@@ -41,8 +41,8 @@
 		if(!istype(A))
 			return 0
 
-		if(A.powered(EQUIP))
-			A.use_power(amount, EQUIP)
+		if(A.powered(AREA_USAGE_EQUIP))
+			A.use_power(amount, AREA_USAGE_EQUIP)
 			return 1
 	return 0
 
@@ -52,7 +52,7 @@
 	icon_state = "charger_wire"
 	w_class = WEIGHT_CLASS_NORMAL
 
-/obj/item/computer_hardware/recharger/wired/can_install(obj/item/device/modular_computer/M, mob/living/user = null)
+/obj/item/computer_hardware/recharger/wired/can_install(obj/item/modular_computer/M, mob/living/user = null)
 	if(ismachinery(M.physical) && M.physical.anchored)
 		return ..()
 	to_chat(user, "<span class='warning'>\The [src] is incompatible with portable computers!</span>")

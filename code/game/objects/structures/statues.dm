@@ -1,6 +1,3 @@
-
-
-
 /obj/structure/statue
 	name = "statue"
 	desc = "Placeholder. Yell at Firecage if you SOMEHOW see this."
@@ -11,63 +8,32 @@
 	max_integrity = 100
 	var/oreAmount = 5
 	var/material_drop_type = /obj/item/stack/sheet/metal
+	var/impressiveness = 15
 	CanAtmosPass = ATMOS_PASS_DENSITY
+	var/art_type = /datum/component/art
+
+/obj/structure/statue/Initialize()
+	. = ..()
+	AddComponent(art_type, impressiveness)
+	addtimer(CALLBACK(src, /datum.proc/_AddComponent, list(/datum/component/beauty, impressiveness *  75)), 0)
 
 /obj/structure/statue/attackby(obj/item/W, mob/living/user, params)
 	add_fingerprint(user)
-	user.changeNext_move(CLICK_CD_MELEE)
-	if(istype(W, /obj/item/wrench))
-		if(anchored)
-			user.visible_message("[user] is loosening the [name]'s bolts.", \
-								 "<span class='notice'>You are loosening the [name]'s bolts...</span>")
-			if(W.use_tool(src, user, 40, volume=100))
-				if(!anchored)
-					return
-				user.visible_message("[user] loosened the [name]'s bolts!", \
-									 "<span class='notice'>You loosen the [name]'s bolts!</span>")
-				anchored = FALSE
-		else
-			if(!isfloorturf(src.loc))
-				user.visible_message("<span class='warning'>A floor must be present to secure the [name]!</span>")
-				return
-			user.visible_message("[user] is securing the [name]'s bolts...", \
-								 "<span class='notice'>You are securing the [name]'s bolts...</span>")
-			if(W.use_tool(src, user, 40, volume=100))
-				if(anchored)
-					return
-				user.visible_message("[user] has secured the [name]'s bolts.", \
-									 "<span class='notice'>You have secured the [name]'s bolts.</span>")
-				anchored = TRUE
-
-	else if(istype(W, /obj/item/pickaxe/drill/jackhammer))
-		var/obj/item/pickaxe/drill/jackhammer/D = W
-		if(!src.loc)
+	if(!(flags_1 & NODECONSTRUCT_1))
+		if(default_unfasten_wrench(user, W))
 			return
-		user.visible_message("[user] destroys the [name]!", \
-							 "<span class='notice'>You destroy the [name].</span>")
-		D.playDigSound()
-		qdel(src)
+		if(W.tool_behaviour == TOOL_WELDER)
+			if(!W.tool_start_check(user, amount=0))
+				return FALSE
 
-	else if(istype(W, /obj/item/weldingtool) || istype(W, /obj/item/gun/energy/plasmacutter))
-		if(!W.tool_start_check(user, amount=0))
-			return FALSE
-
-		playsound(loc, W.usesound, 40, 1)
-		user.visible_message("[user] is slicing apart the [name].", \
-							 "<span class='notice'>You are slicing apart the [name]...</span>")
-		if(W.use_tool(src, user, 40))
-			playsound(loc, 'sound/items/welder2.ogg', 50, 1)
-			user.visible_message("[user] slices apart the [name].", \
-								 "<span class='notice'>You slice apart the [name]!</span>")
-			deconstruct(TRUE)
-	else
-		return ..()
-
-/obj/structure/statue/attack_hand(mob/living/user)
-	user.changeNext_move(CLICK_CD_MELEE)
-	add_fingerprint(user)
-	user.visible_message("[user] rubs some dust off from the [name]'s surface.", \
-						 "<span class='notice'>You rub some dust off from the [name]'s surface.</span>")
+			user.visible_message("<span class='notice'>[user] is slicing apart the [name].</span>", \
+								"<span class='notice'>You are slicing apart the [name]...</span>")
+			if(W.use_tool(src, user, 40, volume=50))
+				user.visible_message("<span class='notice'>[user] slices apart the [name].</span>", \
+									"<span class='notice'>You slice apart the [name]!</span>")
+				deconstruct(TRUE)
+			return
+	return ..()
 
 /obj/structure/statue/deconstruct(disassembled = TRUE)
 	if(!(flags_1 & NODECONSTRUCT_1))
@@ -88,6 +54,8 @@
 	material_drop_type = /obj/item/stack/sheet/mineral/uranium
 	var/last_event = 0
 	var/active = null
+	impressiveness = 25 // radiation makes an impression
+
 
 /obj/structure/statue/uranium/nuke
 	name = "statue of a nuclear fission explosive"
@@ -103,17 +71,17 @@
 	radiate()
 	return ..()
 
-/obj/structure/statue/uranium/CollidedWith(atom/movable/AM)
+/obj/structure/statue/uranium/Bumped(atom/movable/AM)
 	radiate()
 	..()
 
 /obj/structure/statue/uranium/attack_hand(mob/user)
 	radiate()
-	..()
+	. = ..()
 
 /obj/structure/statue/uranium/attack_paw(mob/user)
 	radiate()
-	..()
+	. = ..()
 
 /obj/structure/statue/uranium/proc/radiate()
 	if(!active)
@@ -130,6 +98,7 @@
 /obj/structure/statue/plasma
 	max_integrity = 200
 	material_drop_type = /obj/item/stack/sheet/mineral/plasma
+	impressiveness = 20
 	desc = "This statue is suitably made from plasma."
 
 /obj/structure/statue/plasma/scientist
@@ -141,31 +110,33 @@
 		PlasmaBurn(exposed_temperature)
 
 
-/obj/structure/statue/plasma/bullet_act(obj/item/projectile/Proj)
+/obj/structure/statue/plasma/bullet_act(obj/projectile/Proj)
 	var/burn = FALSE
-	if(!(Proj.nodamage) && Proj.damage_type == BURN)
-		PlasmaBurn(2500)
+	if(!(Proj.nodamage) && Proj.damage_type == BURN && !QDELETED(src))
 		burn = TRUE
 	if(burn)
 		var/turf/T = get_turf(src)
 		if(Proj.firer)
-			message_admins("Plasma statue ignited by [ADMIN_LOOKUPFLW(Proj.firer)] in [ADMIN_COORDJMP(T)]",0,1)
-			log_game("Plasma statue ignited by [key_name(Proj.firer)] in [COORD(T)]")
+			message_admins("Plasma statue ignited by [ADMIN_LOOKUPFLW(Proj.firer)] in [ADMIN_VERBOSEJMP(T)]")
+			log_game("Plasma statue ignited by [key_name(Proj.firer)] in [AREACOORD(T)]")
 		else
-			message_admins("Plasma statue ignited by [Proj]. No known firer, in [ADMIN_COORDJMP(T)]",0,1)
-			log_game("Plasma statue ignited by [Proj] in [COORD(T)]. No known firer.")
-	..()
+			message_admins("Plasma statue ignited by [Proj]. No known firer, in [ADMIN_VERBOSEJMP(T)]")
+			log_game("Plasma statue ignited by [Proj] in [AREACOORD(T)]. No known firer.")
+		PlasmaBurn(2500)
+	. = ..()
 
 /obj/structure/statue/plasma/attackby(obj/item/W, mob/user, params)
-	if(W.is_hot() > 300)//If the temperature of the object is over 300, then ignite
+	if(W.get_temperature() > 300 && !QDELETED(src))//If the temperature of the object is over 300, then ignite
 		var/turf/T = get_turf(src)
-		message_admins("Plasma statue ignited by [ADMIN_LOOKUPFLW(user)] in [ADMIN_COORDJMP(T)]",0,1)
-		log_game("Plasma statue ignited by [key_name(user)] in [COORD(T)]")
-		ignite(W.is_hot())
+		message_admins("Plasma statue ignited by [ADMIN_LOOKUPFLW(user)] in [ADMIN_VERBOSEJMP(T)]")
+		log_game("Plasma statue ignited by [key_name(user)] in [AREACOORD(T)]")
+		ignite(W.get_temperature())
 	else
 		return ..()
 
 /obj/structure/statue/plasma/proc/PlasmaBurn(exposed_temperature)
+	if(QDELETED(src))
+		return
 	atmos_spawn_air("plasma=[oreAmount*10];TEMP=[exposed_temperature]")
 	deconstruct(FALSE)
 
@@ -178,6 +149,7 @@
 /obj/structure/statue/gold
 	max_integrity = 300
 	material_drop_type = /obj/item/stack/sheet/mineral/gold
+	impressiveness = 25
 	desc = "This is a highly valuable statue made from gold."
 
 /obj/structure/statue/gold/hos
@@ -205,6 +177,7 @@
 /obj/structure/statue/silver
 	max_integrity = 300
 	material_drop_type = /obj/item/stack/sheet/mineral/silver
+	impressiveness = 25
 	desc = "This is a valuable statue made from silver."
 
 /obj/structure/statue/silver/md
@@ -232,6 +205,7 @@
 /obj/structure/statue/diamond
 	max_integrity = 1000
 	material_drop_type = /obj/item/stack/sheet/mineral/diamond
+	impressiveness = 50
 	desc = "This is a very expensive diamond statue."
 
 /obj/structure/statue/diamond/captain
@@ -251,6 +225,7 @@
 /obj/structure/statue/bananium
 	max_integrity = 300
 	material_drop_type = /obj/item/stack/sheet/mineral/bananium
+	impressiveness = 50
 	desc = "A bananium statue with a small engraving:'HOOOOOOONK'."
 	var/spam_flag = 0
 
@@ -258,7 +233,7 @@
 	name = "statue of a clown"
 	icon_state = "clown"
 
-/obj/structure/statue/bananium/CollidedWith(atom/movable/AM)
+/obj/structure/statue/bananium/Bumped(atom/movable/AM)
 	honk()
 	..()
 
@@ -268,7 +243,7 @@
 
 /obj/structure/statue/bananium/attack_hand(mob/user)
 	honk()
-	..()
+	. = ..()
 
 /obj/structure/statue/bananium/attack_paw(mob/user)
 	honk()
@@ -276,16 +251,16 @@
 
 /obj/structure/statue/bananium/proc/honk()
 	if(!spam_flag)
-		spam_flag = 1
-		playsound(src.loc, 'sound/items/bikehorn.ogg', 50, 1)
-		spawn(20)
-			spam_flag = 0
+		spam_flag = TRUE
+		playsound(src.loc, 'sound/items/bikehorn.ogg', 50, TRUE)
+		addtimer(VARSET_CALLBACK(src, spam_flag, FALSE), 2 SECONDS)
 
 /////////////////////sandstone/////////////////////////////////////////
 
 /obj/structure/statue/sandstone
 	max_integrity = 50
 	material_drop_type = /obj/item/stack/sheet/mineral/sandstone
+	impressiveness = 15
 
 /obj/structure/statue/sandstone/assistant
 	name = "statue of an assistant"
@@ -309,3 +284,19 @@
 	name = "snowman"
 	desc = "Several lumps of snow put together to form a snowman."
 	icon_state = "snowman"
+
+/obj/structure/statue/snow/snowlegion
+    name = "snowlegion"
+    desc = "Looks like that weird kid with the tiger plushie has been round here again."
+    icon_state = "snowlegion"
+
+///////////////////////////////bronze///////////////////////////////////
+
+/obj/structure/statue/bronze
+	material_drop_type = /obj/item/stack/tile/bronze
+
+/obj/structure/statue/bronze/marx
+	name = "\improper Karl Marx bust"
+	desc = "A bust depicting a certain 19th century economist. You get the feeling a specter is haunting the station."
+	icon_state = "marx"
+	art_type = /datum/component/art/rev

@@ -41,7 +41,7 @@
 	name = "a hand teleporter."
 	targetitem = /obj/item/hand_tele
 	difficulty = 5
-	excludefromjob = list("Captain")
+	excludefromjob = list("Captain", "Research Director")
 
 /datum/objective_item/steal/jetpack
 	name = "the Captain's jetpack."
@@ -77,14 +77,14 @@
 	return !N.fake
 
 /datum/objective_item/steal/reflector
-	name = "a reflector vest."
-	targetitem = /obj/item/clothing/suit/armor/laserproof
+	name = "a reflector trenchcoat."
+	targetitem = /obj/item/clothing/suit/hooded/ablative
 	difficulty = 3
 	excludefromjob = list("Head of Security", "Warden")
 
 /datum/objective_item/steal/reactive
 	name = "the reactive teleport armor."
-	targetitem = /obj/item/clothing/suit/armor/reactive
+	targetitem = /obj/item/clothing/suit/armor/reactive/teleport
 	difficulty = 5
 	excludefromjob = list("Research Director")
 
@@ -130,10 +130,10 @@
 
 /datum/objective_item/steal/functionalai
 	name = "a functional AI."
-	targetitem = /obj/item/device/aicard
+	targetitem = /obj/item/aicard
 	difficulty = 20 //beyond the impossible
 
-/datum/objective_item/steal/functionalai/check_special_completion(obj/item/device/aicard/C)
+/datum/objective_item/steal/functionalai/check_special_completion(obj/item/aicard/C)
 	for(var/mob/living/silicon/ai/A in C)
 		if(isAI(A) && A.stat != DEAD) //See if any AI's are alive inside that card.
 			return 1
@@ -148,12 +148,12 @@
 
 /datum/objective_item/steal/blueprints/check_special_completion(obj/item/I)
 	if(istype(I, /obj/item/areaeditor/blueprints))
-		return 1
+		return TRUE
 	if(istype(I, /obj/item/photo))
 		var/obj/item/photo/P = I
-		if(P.blueprints)	//if the blueprints are in frame
-			return 1
-	return 0
+		if(P.picture.has_blueprints)	//if the blueprints are in frame
+			return TRUE
+	return FALSE
 
 /datum/objective_item/steal/slime
 	name = "an unused sample of slime extract."
@@ -165,6 +165,12 @@
 	if(E.Uses > 0)
 		return 1
 	return 0
+
+/datum/objective_item/steal/blackbox
+	name = "The Blackbox."
+	targetitem = /obj/item/blackbox
+	difficulty = 10
+	excludefromjob = list("Chief Engineer","Station Engineer","Atmospheric Technician")
 
 //Unique Objectives
 /datum/objective_item/unique/docs_red
@@ -216,7 +222,7 @@
 
 /datum/objective_item/special/laserpointer
 	name = "a laser pointer."
-	targetitem = /obj/item/device/laser_pointer
+	targetitem = /obj/item/laser_pointer
 	difficulty = 5
 
 /datum/objective_item/special/corgimeat

@@ -1,102 +1,155 @@
 /*
 	These defines are specific to the atom/flags_1 bitmask
 */
-#define ALL ~0 //For convenience.
+#define ALL (~0) //For convenience.
 #define NONE 0
 
 GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768))
 
 // for /datum/var/datum_flags
-#define DF_USE_TAG 1
-#define DF_VAR_EDITED 2
+#define DF_USE_TAG		(1<<0)
+#define DF_VAR_EDITED	(1<<1)
+#define DF_ISPROCESSING (1<<2)
 
 //FLAGS BITMASK
-#define STOPSPRESSUREDMAGE_1 1	//This flag is used on the flags_1 variable for SUIT and HEAD items which stop pressure damage. Note that the flag 1 was previous used as ONBACK, so it is possible for some code to use (flags & 1) when checking if something can be put on your back. Replace this code with (inv_flags & SLOT_BACK) if you see it anywhere
-//To successfully stop you taking all pressure damage you must have both a suit and head item with this flag.
 
-#define NODROP_1			2		// This flag makes it so that an item literally cannot be removed at all, or at least that's how it should be. Only deleted.
-#define NOBLUDGEON_1		4		// when an item has this it produces no "X has been hit by Y with Z" message in the default attackby()
-#define MASKINTERNALS_1		8		// mask allows internals
-#define HEAR_1 				16		// This flag is what recursive_hear_check() uses to determine wether to add an item to the hearer list or not.
-#define CHECK_RICOCHET_1	32		// Projectiels will check ricochet on things impacted that have this.
-#define CONDUCT_1			64		// conducts electricity (metal etc.)
-#define ABSTRACT_1		   	128		// for all things that are technically items but used for various different stuff, made it 128 because it could conflict with other flags other way
-#define NODECONSTRUCT_1  	128		// For machines and structures that should not break into parts, eg, holodeck stuff
-#define OVERLAY_QUEUED_1	256		// atom queued to SSoverlay
-#define ON_BORDER_1			512		// item has priority to check when entering or leaving
+/// This flag is what recursive_hear_check() uses to determine wether to add an item to the hearer list or not.
+#define HEAR_1						(1<<3)
+/// conducts electricity (metal etc.)
+#define CONDUCT_1					(1<<5)
+/// For machines and structures that should not break into parts, eg, holodeck stuff
+#define NODECONSTRUCT_1				(1<<7)
+/// atom queued to SSoverlay
+#define OVERLAY_QUEUED_1			(1<<8)
+/// item has priority to check when entering or leaving
+#define ON_BORDER_1					(1<<9)
+/// Prevent clicking things below it on the same turf eg. doors/ fulltile windows
+#define PREVENT_CLICK_UNDER_1		(1<<11)
+#define HOLOGRAM_1					(1<<12)
+/// Prevents mobs from getting chainshocked by teslas and the supermatter
+#define SHOCKED_1 					(1<<13)
+///Whether /atom/Initialize() has already run for the object
+#define INITIALIZED_1				(1<<14)
+/// was this spawned by an admin? used for stat tracking stuff.
+#define ADMIN_SPAWNED_1			    (1<<15)
+/// should not get harmed if this gets caught by an explosion?
+#define PREVENT_CONTENTS_EXPLOSION_1 (1<<16)
 
-#define NOSLIP_1			1024 		//prevents from slipping on wet floors, in space etc
-#define _UNUSED_1		2048
 
-// BLOCK_GAS_SMOKE_EFFECT_1 only used in masks at the moment.
-#define BLOCK_GAS_SMOKE_EFFECT_1 4096	// blocks the effect that chemical clouds would have on a mob --glasses, mask and helmets ONLY!
-#define THICKMATERIAL_1			8192	//prevents syringes, parapens and hypos if the external suit or helmet (if targeting head) has this flag. Example: space suits, biosuit, bombsuits, thick suits that cover your body.
-#define DROPDEL_1				16384	// When dropped, it calls qdel on itself
-#define PREVENT_CLICK_UNDER_1	32768	//Prevent clicking things below it on the same turf eg. doors/ fulltile windows
-
-/* Secondary atom flags, for the flags_2 var, denoted with a _2 */
-
-#define SLOWS_WHILE_IN_HAND_2	1
-#define NO_EMP_WIRES_2			2
-#define HOLOGRAM_2				4
-#define FROZEN_2				8
-#define STATIONLOVING_2			16
-#define INFORM_ADMINS_ON_RELOCATE_2	32
-#define BANG_PROTECT_2			64
-
-// An item worn in the ear slot with HEALS_EARS will heal your ears each
-// Life() tick, even if normally your ears would be too damaged to heal.
-#define HEALS_EARS_2			128
-
-// A mob with OMNITONGUE has no restriction in the ability to speak
-// languages that they know. So even if they wouldn't normally be able to
-// through mob or tongue restrictions, this flag allows them to ignore
-// those restrictions.
-#define OMNITONGUE_2			256
-
-// TESLA_IGNORE grants immunity from being targeted by tesla-style electricity
-#define TESLA_IGNORE_2			512
-
-// Stops you from putting things like an RCD or other items into an ORM or protolathe for materials.
-#define NO_MAT_REDEMPTION_2		1024
+/// If the thing can reflect light (lasers/energy)
+#define RICOCHET_SHINY			(1<<0)
+/// If the thing can reflect matter (bullets/bomb shrapnel)
+#define RICOCHET_HARD			(1<<1)
 
 //turf-only flags
-#define NOJAUNT_1				1
-#define UNUSED_TRANSIT_TURF_1	2
-#define CAN_BE_DIRTY_1			4 // If a turf can be made dirty at roundstart. This is also used in areas.
-#define NO_DEATHRATTLE_1		16 // Do not notify deadchat about any deaths that occur on this turf.
-#define NO_RUINS_1				32 //Blocks ruins spawning on the turf
-#define NO_LAVA_GEN_1				64 //Blocks lava rivers being generated on the turf
-//#define CHECK_RICOCHET_1	32		//Same thing as atom flag.
+#define NOJAUNT_1					(1<<0)
+#define UNUSED_RESERVATION_TURF_1	(1<<1)
+/// If a turf can be made dirty at roundstart. This is also used in areas.
+#define CAN_BE_DIRTY_1				(1<<2)
+/// If blood cultists can draw runes or build structures on this turf
+#define CULT_PERMITTED_1			(1<<3)
+/// Blocks lava rivers being generated on the turf
+#define NO_LAVA_GEN_1				(1<<6)
+/// Blocks ruins spawning on the turf
+#define NO_RUINS_1					(1<<10)
 
 /*
 	These defines are used specifically with the atom/pass_flags bitmask
 	the atom/checkpass() proc uses them (tables will call movable atom checkpass(PASSTABLE) for example)
 */
 //flags for pass_flags
-#define PASSTABLE		1
-#define PASSGLASS		2
-#define PASSGRILLE		4
-#define PASSBLOB		8
-#define PASSMOB			16
-#define PASSCLOSEDTURF		32
-#define LETPASSTHROW	64
-
+#define PASSTABLE		(1<<0)
+#define PASSGLASS		(1<<1)
+#define PASSGRILLE		(1<<2)
+#define PASSBLOB		(1<<3)
+#define PASSMOB			(1<<4)
+#define PASSCLOSEDTURF	(1<<5)
+#define LETPASSTHROW	(1<<6)
+#define	PASSMACHINE		(1<<7)
+#define PASSSTRUCTURE	(1<<8)
 
 //Movement Types
-#define IMMOBILE 0
-#define GROUND 1
-#define FLYING 2
-
-// Flags for reagents
-#define REAGENT_NOREACT 1
+#define GROUND			(1<<0)
+#define FLYING			(1<<1)
+#define VENTCRAWLING	(1<<2)
+#define FLOATING		(1<<3)
+/// When moving, will Bump()/Cross()/Uncross() everything, but won't be stopped.
+#define UNSTOPPABLE		(1<<4)
 
 //Fire and Acid stuff, for resistance_flags
-#define LAVA_PROOF 1
-#define FIRE_PROOF 2 //100% immune to fire damage (but not necessarily to lava or heat)
-#define FLAMMABLE 4
-#define ON_FIRE 8
-#define UNACIDABLE 16 //acid can't even appear on it, let alone melt it.
-#define ACID_PROOF 32 //acid stuck on it doesn't melt it.
-#define INDESTRUCTIBLE 64 //doesn't take damage
-#define FREEZE_PROOF 128 //can't be frozen
+#define LAVA_PROOF		(1<<0)
+/// 100% immune to fire damage (but not necessarily to lava or heat)
+#define FIRE_PROOF		(1<<1)
+#define FLAMMABLE		(1<<2)
+#define ON_FIRE			(1<<3)
+/// acid can't even appear on it, let alone melt it.
+#define UNACIDABLE		(1<<4)
+/// acid stuck on it doesn't melt it.
+#define ACID_PROOF		(1<<5)
+/// doesn't take damage
+#define INDESTRUCTIBLE	(1<<6)
+/// can't be frozen
+#define FREEZE_PROOF	(1<<7)
+
+//tesla_zap
+#define ZAP_MACHINE_EXPLOSIVE		(1<<0)
+#define ZAP_ALLOW_DUPLICATES		(1<<1)
+#define ZAP_OBJ_DAMAGE			(1<<2)
+#define ZAP_MOB_DAMAGE			(1<<3)
+#define ZAP_MOB_STUN			(1<<4)
+
+#define ZAP_DEFAULT_FLAGS ALL
+#define ZAP_FUSION_FLAGS ZAP_OBJ_DAMAGE | ZAP_MOB_DAMAGE | ZAP_MOB_STUN
+#define ZAP_SUPERMATTER_FLAGS NONE
+
+//EMP protection
+#define EMP_PROTECT_SELF (1<<0)
+#define EMP_PROTECT_CONTENTS (1<<1)
+#define EMP_PROTECT_WIRES (1<<2)
+
+//Mob mobility var flags
+/// can move
+#define MOBILITY_MOVE			(1<<0)
+/// can, and is, standing up
+#define MOBILITY_STAND			(1<<1)
+/// can pickup items
+#define MOBILITY_PICKUP			(1<<2)
+/// can hold and use items
+#define MOBILITY_USE			(1<<3)
+/// can use interfaces like machinery
+#define MOBILITY_UI				(1<<4)
+/// can use storage item
+#define MOBILITY_STORAGE		(1<<5)
+/// can pull things
+#define MOBILITY_PULL			(1<<6)
+
+#define MOBILITY_FLAGS_DEFAULT (MOBILITY_MOVE | MOBILITY_STAND | MOBILITY_PICKUP | MOBILITY_USE | MOBILITY_UI | MOBILITY_STORAGE | MOBILITY_PULL)
+#define MOBILITY_FLAGS_INTERACTION (MOBILITY_USE | MOBILITY_PICKUP | MOBILITY_UI | MOBILITY_STORAGE)
+
+// radiation
+#define RAD_PROTECT_CONTENTS (1<<0)
+#define RAD_NO_CONTAMINATE (1<<1)
+
+//alternate appearance flags
+#define AA_TARGET_SEE_APPEARANCE (1<<0)
+#define AA_MATCH_TARGET_OVERLAYS (1<<1)
+
+#define KEEP_TOGETHER_ORIGINAL "keep_together_original"
+
+//setter for KEEP_TOGETHER to allow for multiple sources to set and unset it
+#define ADD_KEEP_TOGETHER(x, source)\
+	if ((x.appearance_flags & KEEP_TOGETHER) && !HAS_TRAIT(x, TRAIT_KEEP_TOGETHER)) ADD_TRAIT(x, TRAIT_KEEP_TOGETHER, KEEP_TOGETHER_ORIGINAL); \
+	ADD_TRAIT(x, TRAIT_KEEP_TOGETHER, source);\
+	x.appearance_flags |= KEEP_TOGETHER
+
+#define REMOVE_KEEP_TOGETHER(x, source)\
+	REMOVE_TRAIT(x, TRAIT_KEEP_TOGETHER, source);\
+	if(HAS_TRAIT_FROM_ONLY(x, TRAIT_KEEP_TOGETHER, KEEP_TOGETHER_ORIGINAL))\
+		REMOVE_TRAIT(x, TRAIT_KEEP_TOGETHER, KEEP_TOGETHER_ORIGINAL);\
+	else if(!HAS_TRAIT(x, TRAIT_KEEP_TOGETHER))\
+	 	x.appearance_flags &= ~KEEP_TOGETHER
+
+//religious_tool flags
+#define RELIGION_TOOL_INVOKE (1<<0)
+#define RELIGION_TOOL_SACRIFICE (1<<1)
+#define RELIGION_TOOL_SECTSELECT (1<<2)

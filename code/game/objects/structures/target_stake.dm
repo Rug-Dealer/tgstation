@@ -49,6 +49,9 @@
 		to_chat(user, "<span class='notice'>You slide the target into the stake.</span>")
 
 /obj/structure/target_stake/attack_hand(mob/user)
+	. = ..()
+	if(.)
+		return
 	if(pinned_target)
 		removeTarget(user)
 
@@ -66,8 +69,8 @@
 		pinned_target.forceMove(user.drop_location())
 		to_chat(user, "<span class='notice'>You take the target out of the stake.</span>")
 
-/obj/structure/target_stake/bullet_act(obj/item/projectile/P)
+/obj/structure/target_stake/bullet_act(obj/projectile/P)
 	if(pinned_target)
 		pinned_target.bullet_act(P)
 	else
-		..()
+		. = ..()

@@ -6,8 +6,10 @@
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "smoke0"
 	density = TRUE
-	anchored = TRUE
 	circuit = /obj/item/circuitboard/machine/smoke_machine
+	ui_x = 350
+	ui_y = 350
+
 	var/efficiency = 10
 	var/on = FALSE
 	var/cooldown = 0
@@ -16,7 +18,7 @@
 	var/setting = 1 // displayed range is 3 * setting
 	var/max_range = 3 // displayed max range is 3 * max range
 
-/datum/effect_system/smoke_spread/chem/smoke_machine/set_up(datum/reagents/carry, setting=1, efficiency=10, loc)
+/datum/effect_system/smoke_spread/chem/smoke_machine/set_up(datum/reagents/carry, setting=1, efficiency=10, loc, silent=FALSE)
 	amount = setting
 	carry.copy_to(chemholder, 20)
 	carry.remove_any(amount * 16 / efficiency)
@@ -32,15 +34,18 @@
 /obj/machinery/smoke_machine/Initialize()
 	. = ..()
 	create_reagents(REAGENTS_BASE_VOLUME)
+	AddComponent(/datum/component/plumbing/simple_demand)
 	for(var/obj/item/stock_parts/matter_bin/B in component_parts)
 		reagents.maximum_volume += REAGENTS_BASE_VOLUME * B.rating
 
-/obj/machinery/smoke_machine/update_icon()
+/obj/machinery/smoke_machine/update_icon_state()
 	if((!is_operational()) || (!on) || (reagents.total_volume == 0))
-		icon_state = "smoke0"
+		if (panel_open)
+			icon_state = "smoke0-o"
+		else
+			icon_state = "smoke0"
 	else
 		icon_state = "smoke1"
-	. = ..()
 
 /obj/machinery/smoke_machine/RefreshParts()
 	var/new_volume = REAGENTS_BASE_VOLUME
@@ -62,15 +67,16 @@
 
 /obj/machinery/smoke_machine/process()
 	..()
-	update_icon()
 	if(!is_operational())
 		return
 	if(reagents.total_volume == 0)
 		on = FALSE
+		update_icon()
 		return
 	var/turf/T = get_turf(src)
 	var/smoke_test = locate(/obj/effect/particle_effect/smoke) in T
 	if(on && !smoke_test)
+		update_icon()
 		var/datum/effect_system/smoke_spread/chem/smoke_machine/smoke = new()
 		smoke.set_up(reagents, setting*3, efficiency, T)
 		smoke.start()
@@ -79,13 +85,16 @@
 	add_fingerprint(user)
 	if(istype(I, /obj/item/reagent_containers) && I.is_open_container())
 		var/obj/item/reagent_containers/RC = I
-		var/units = RC.reagents.trans_to(src, RC.amount_per_transfer_from_this)
+		var/units = RC.reagents.trans_to(src, RC.amount_per_transfer_from_this, transfered_by = user)
 		if(units)
 			to_chat(user, "<span class='notice'>You transfer [units] units of the solution to [src].</span>")
-			add_logs(usr, src, "has added [english_list(RC.reagents.reagent_list)] to [src]")
 			return
 	if(default_unfasten_wrench(user, I, 40))
 		on = FALSE
+		return
+	if(default_deconstruction_screwdriver(user, "smoke0-o", "smoke0", I))
+		return
+	if(default_deconstruction_crowbar(I))
 		return
 	return ..()
 
@@ -98,7 +107,7 @@
 										datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
 	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "smoke_machine", name, 450, 350, master_ui, state)
+		ui = new(user, src, ui_key, "SmokeMachine", name, ui_x, ui_y, master_ui, state)
 		ui.open()
 
 /obj/machinery/smoke_machine/ui_data(mob/user)
@@ -124,6 +133,7 @@
 	switch(action)
 		if("purge")
 			reagents.clear_reagents()
+			update_icon()
 			. = TRUE
 		if("setting")
 			var/amount = text2num(params["amount"])
@@ -132,10 +142,11 @@
 				. = TRUE
 		if("power")
 			on = !on
+			update_icon()
 			if(on)
-				message_admins("[key_name_admin(usr)] activated a smoke machine that contains [english_list(reagents.reagent_list)] at [ADMIN_COORDJMP(src)].")
-				log_game("[key_name(usr)] activated a smoke machine that contains [english_list(reagents.reagent_list)] at [COORD(src)].")
-				add_logs(usr, src, "has activated [src] which contains [english_list(reagents.reagent_list)].")
+				message_admins("[ADMIN_LOOKUPFLW(usr)] activated a smoke machine that contains [english_list(reagents.reagent_list)] at [ADMIN_VERBOSEJMP(src)].")
+				log_game("[key_name(usr)] activated a smoke machine that contains [english_list(reagents.reagent_list)] at [AREACOORD(src)].")
+				log_combat(usr, src, "has activated [src] which contains [english_list(reagents.reagent_list)] at [AREACOORD(src)].")
 		if("goScreen")
 			screen = params["screen"]
 			. = TRUE

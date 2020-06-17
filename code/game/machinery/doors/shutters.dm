@@ -1,9 +1,10 @@
 /obj/machinery/door/poddoor/shutters
 	gender = PLURAL
 	name = "shutters"
-	desc = "Heavy duty metal shutters that opens mechanically."
+	desc = "Heavy duty metal shutters that open mechanically."
 	icon = 'icons/obj/doors/shutters.dmi'
 	layer = SHUTTER_LAYER
+	closingLayer = SHUTTER_LAYER
 	damage_deflection = 20
 
 /obj/machinery/door/poddoor/shutters/preopen
@@ -11,19 +12,6 @@
 	density = FALSE
 	opacity = 0
 
-
-//shutters look like ass with things on top of them.
-
-/obj/machinery/door/poddoor/shutters/Initialize()
-	. = ..()
-	layer = CLOSED_DOOR_LAYER	//to handle /obj/machinery/door/Initialize() resetting the layer.
-
-
-/obj/machinery/door/poddoor/shutters/open(ignorepower = 0)
-	..()
-	layer = CLOSED_DOOR_LAYER
-
-
-/obj/machinery/door/poddoor/shutters/close(ignorepower = 0)
-	..()
-	layer = CLOSED_DOOR_LAYER
+/obj/machinery/door/poddoor/shutters/indestructible
+	name = "hardened shutters"
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF

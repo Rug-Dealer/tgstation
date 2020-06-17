@@ -1,10 +1,12 @@
 /obj/item/melee/transforming/energy
+	icon = 'icons/obj/transforming_energy.dmi'
 	hitsound_on = 'sound/weapons/blade1.ogg'
 	heat = 3500
 	max_integrity = 200
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 0, rad = 0, fire = 100, acid = 30)
+	armor = list("melee" = 0, "bullet" = 0, "laser" = 0, "energy" = 0, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 100, "acid" = 30)
 	resistance_flags = FIRE_PROOF
 	var/brightness_on = 3
+	var/sword_color
 
 /obj/item/melee/transforming/energy/Initialize()
 	. = ..()
@@ -17,13 +19,15 @@
 	return ..()
 
 /obj/item/melee/transforming/energy/suicide_act(mob/user)
+	if(!active)
+		transform_weapon(user, TRUE)
 	user.visible_message("<span class='suicide'>[user] is [pick("slitting [user.p_their()] stomach open with", "falling on")] [src]! It looks like [user.p_theyre()] trying to commit seppuku!</span>")
 	return (BRUTELOSS|FIRELOSS)
 
 /obj/item/melee/transforming/energy/add_blood_DNA(list/blood_dna)
 	return FALSE
 
-/obj/item/melee/transforming/energy/is_sharp()
+/obj/item/melee/transforming/energy/get_sharpness()
 	return active * sharpness
 
 /obj/item/melee/transforming/energy/process()
@@ -33,15 +37,15 @@
 	. = ..()
 	if(.)
 		if(active)
-			if(item_color)
-				icon_state = "sword[item_color]"
+			if(sword_color)
+				icon_state = "sword[sword_color]"
 			START_PROCESSING(SSobj, src)
 			set_light(brightness_on)
 		else
 			STOP_PROCESSING(SSobj, src)
 			set_light(0)
 
-/obj/item/melee/transforming/energy/is_hot()
+/obj/item/melee/transforming/energy/get_temperature()
 	return active * heat
 
 /obj/item/melee/transforming/energy/ignition_effect(atom/A, mob/user)
@@ -51,10 +55,10 @@
 	var/in_mouth = ""
 	if(iscarbon(user))
 		var/mob/living/carbon/C = user
-		if(C.wear_mask == src)
-			in_mouth = ", barely missing their nose"
-	. = "<span class='warning'>[user] swings their [src][in_mouth]. They light [A] in the process.</span>"
-	playsound(loc, hitsound, get_clamped_volume(), 1, -1)
+		if(C.wear_mask)
+			in_mouth = ", barely missing [C.p_their()] nose"
+	. = "<span class='warning'>[user] swings [user.p_their()] [name][in_mouth]. [user.p_they(TRUE)] light[user.p_s()] [user.p_their()] [A.name] in the process.</span>"
+	playsound(loc, hitsound, get_clamped_volume(), TRUE, -1)
 	add_fingerprint(user)
 
 /obj/item/melee/transforming/energy/axe
@@ -95,14 +99,14 @@
 	throw_speed = 3
 	throw_range = 5
 	sharpness = IS_SHARP
-	embedding = list("embed_chance" = 75, "embedded_impact_pain_multiplier" = 10)
+	embedding = list("embed_chance" = 75, "impact_pain_mult" = 10)
 	armour_penetration = 35
 	block_chance = 50
 
 /obj/item/melee/transforming/energy/sword/transform_weapon(mob/living/user, supress_message_text)
 	. = ..()
-	if(. && active && item_color)
-		icon_state = "sword[item_color]"
+	if(. && active && sword_color)
+		icon_state = "sword[sword_color]"
 
 /obj/item/melee/transforming/energy/sword/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
 	if(active)
@@ -110,10 +114,10 @@
 	return 0
 
 /obj/item/melee/transforming/energy/sword/cyborg
-	item_color = "red"
+	sword_color = "red"
 	var/hitcost = 50
 
-/obj/item/melee/transforming/energy/sword/cyborg/attack(mob/M, var/mob/living/silicon/robot/R)
+/obj/item/melee/transforming/energy/sword/cyborg/attack(mob/M, mob/living/silicon/robot/R)
 	if(R.cell)
 		var/obj/item/stock_parts/cell/C = R.cell
 		if(active && !(C.use(hitcost)))
@@ -131,11 +135,18 @@
 	icon = 'icons/obj/surgery.dmi'
 	icon_state = "esaw_0"
 	icon_state_on = "esaw_1"
-	item_color = null //stops icon from breaking when turned on.
+	sword_color = null //stops icon from breaking when turned on.
 	hitcost = 75 //Costs more than a standard cyborg esword
 	w_class = WEIGHT_CLASS_NORMAL
 	sharpness = IS_SHARP
 	light_color = "#40ceff"
+	tool_behaviour = TOOL_SAW
+	toolspeed = 0.7 //faster as a saw
+
+/obj/item/melee/transforming/energy/sword/cyborg/saw/cyborg_unequip(mob/user)
+	if(!active)
+		return
+	transform_weapon(user, TRUE)
 
 /obj/item/melee/transforming/energy/sword/cyborg/saw/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
 	return 0
@@ -148,7 +159,7 @@
 	. = ..()
 	if(LAZYLEN(possible_colors))
 		var/set_color = pick(possible_colors)
-		item_color = set_color
+		sword_color = set_color
 		light_color = possible_colors[set_color]
 
 /obj/item/melee/transforming/energy/sword/saber/process()
@@ -171,10 +182,10 @@
 	possible_colors = list("purple" = LIGHT_COLOR_LAVENDER)
 
 /obj/item/melee/transforming/energy/sword/saber/attackby(obj/item/W, mob/living/user, params)
-	if(istype(W, /obj/item/device/multitool))
+	if(W.tool_behaviour == TOOL_MULTITOOL)
 		if(!hacked)
 			hacked = TRUE
-			item_color = "rainbow"
+			sword_color = "rainbow"
 			to_chat(user, "<span class='warning'>RNBW_ENGAGE</span>")
 
 			if(active)
@@ -224,4 +235,4 @@
 	name = "hardlight blade"
 	desc = "An extremely sharp blade made out of hard light. Packs quite a punch."
 	icon_state = "lightblade"
-	item_state = "lightblade"
+	inhand_icon_state = "lightblade"

@@ -1,28 +1,42 @@
 /obj/effect/decal/cleanable
 	gender = PLURAL
 	layer = ABOVE_NORMAL_TURF_LAYER
-	var/list/random_icon_states = list()
+	var/list/random_icon_states = null
 	var/blood_state = "" //I'm sorry but cleanable/blood code is ass, and so is blood_DNA
 	var/bloodiness = 0 //0-100, amount of blood in this decal, used for making footprints and affecting the alpha of bloody footprints
 	var/mergeable_decal = TRUE //when two of these are on a same tile or do we need to merge them into just one?
+	var/beauty = 0
 
 /obj/effect/decal/cleanable/Initialize(mapload, list/datum/disease/diseases)
 	. = ..()
-	if (random_icon_states && length(src.random_icon_states) > 0)
-		src.icon_state = pick(src.random_icon_states)
+	if (random_icon_states && (icon_state == initial(icon_state)) && length(random_icon_states) > 0)
+		icon_state = pick(random_icon_states)
 	create_reagents(300)
-	if(src.loc && isturf(src.loc))
-		for(var/obj/effect/decal/cleanable/C in src.loc)
-			if(C != src && C.type == src.type && !QDELETED(C))
+	if(loc && isturf(loc))
+		for(var/obj/effect/decal/cleanable/C in loc)
+			if(C != src && C.type == type && !QDELETED(C))
 				if (replace_decal(C))
 					return INITIALIZE_HINT_QDEL
+
 	if(LAZYLEN(diseases))
 		var/list/datum/disease/diseases_to_add = list()
 		for(var/datum/disease/D in diseases)
-			if(D.spread_flags & VIRUS_SPREAD_CONTACT_FLUIDS)
+			if(D.spread_flags & DISEASE_SPREAD_CONTACT_FLUIDS)
 				diseases_to_add += D
 		if(LAZYLEN(diseases_to_add))
 			AddComponent(/datum/component/infective, diseases_to_add)
+
+	addtimer(CALLBACK(src, /datum.proc/_AddComponent, list(/datum/component/beauty, beauty)), 0)
+
+	var/turf/T = get_turf(src)
+	if(T && is_station_level(T.z))
+		SSblackbox.record_feedback("tally", "station_mess_created", 1, name)
+
+/obj/effect/decal/cleanable/Destroy()
+	var/turf/T = get_turf(src)
+	if(T && is_station_level(T.z))
+		SSblackbox.record_feedback("tally", "station_mess_destroyed", 1, name)
+	return ..()
 
 /obj/effect/decal/cleanable/proc/replace_decal(obj/effect/decal/cleanable/C) // Returns true if we should give up in favor of the pre-existing decal
 	if(mergeable_decal)
@@ -39,15 +53,15 @@
 				to_chat(user, "<span class='notice'>[W] is full!</span>")
 				return
 			to_chat(user, "<span class='notice'>You scoop up [src] into [W]!</span>")
-			reagents.trans_to(W, reagents.total_volume)
+			reagents.trans_to(W, reagents.total_volume, transfered_by = user)
 			if(!reagents.total_volume) //scooped up all of it
 				qdel(src)
 				return
-	if(W.is_hot()) //todo: make heating a reagent holder proc
+	if(W.get_temperature()) //todo: make heating a reagent holder proc
 		if(istype(W, /obj/item/clothing/mask/cigarette))
 			return
 		else
-			var/hotness = W.is_hot()
+			var/hotness = W.get_temperature()
 			reagents.expose_temperature(hotness)
 			to_chat(user, "<span class='notice'>You heat [name] with [W]!</span>")
 	else
@@ -73,6 +87,8 @@
 		var/mob/living/carbon/human/H = O
 		if(H.shoes && blood_state && bloodiness)
 			var/obj/item/clothing/shoes/S = H.shoes
+			if(!S.can_be_bloody)
+				return
 			var/add_blood = 0
 			if(bloodiness >= BLOOD_GAIN_PER_STEP)
 				add_blood = BLOOD_GAIN_PER_STEP
@@ -84,6 +100,9 @@
 			S.blood_state = blood_state
 			update_icon()
 			H.update_inv_shoes()
+/atom/effect/decal/cleanable/washed(atom/washer)
+	. = ..()
+	qdel(src)
 
 /obj/effect/decal/cleanable/proc/can_bloodcrawl_in()
 	if((blood_state != BLOOD_STATE_OIL) && (blood_state != BLOOD_STATE_NOT_BLOODY))

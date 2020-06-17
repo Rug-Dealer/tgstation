@@ -9,26 +9,32 @@
 	w_class = WEIGHT_CLASS_GIGANTIC
 	flags_1 = CONDUCT_1
 
-/obj/item/mecha_parts/chassis
-	name="Mecha Chassis"
-	icon_state = "backbone"
-	var/datum/construction/construct
+/obj/item/mecha_parts/proc/try_attach_part(mob/user, obj/mecha/M) //For attaching parts to a finished mech
+	if(!user.transferItemToLoc(src, M))
+		to_chat(user, "<span class='warning'>\The [src] is stuck to your hand, you cannot put it in \the [M]!</span>")
+		return FALSE
+	user.visible_message("<span class='notice'>[user] attaches [src] to [M].</span>", "<span class='notice'>You attach [src] to [M].</span>")
+	return TRUE
 
-/obj/item/mecha_parts/chassis/attackby(obj/item/W, mob/user, params)
-	if(!construct || !construct.action(W, user))
-		return ..()
-
-/obj/item/mecha_parts/chassis/attack_hand()
+/obj/item/mecha_parts/part/try_attach_part(mob/user, obj/mecha/M)
 	return
+
+/obj/item/mecha_parts/chassis
+	name = "Mecha Chassis"
+	icon_state = "backbone"
+	interaction_flags_item = NONE			//Don't pick us up!!
+	var/construct_type
+
+/obj/item/mecha_parts/chassis/Initialize()
+	. = ..()
+	if(construct_type)
+		AddComponent(construct_type)
 
 /////////// Ripley
 
 /obj/item/mecha_parts/chassis/ripley
 	name = "\improper Ripley chassis"
-
-/obj/item/mecha_parts/chassis/ripley/Initialize()
-	. = ..()
-	construct = new /datum/construction/mecha/ripley_chassis(src)
+	construct_type = /datum/component/construction/unordered/mecha_chassis/ripley
 
 /obj/item/mecha_parts/part/ripley_torso
 	name = "\improper Ripley torso"
@@ -59,10 +65,7 @@
 
 /obj/item/mecha_parts/chassis/odysseus
 	name = "\improper Odysseus chassis"
-
-/obj/item/mecha_parts/chassis/odysseus/Initialize()
-	. = ..()
-	construct = new /datum/construction/mecha/odysseus_chassis(src)
+	construct_type = /datum/component/construction/unordered/mecha_chassis/odysseus
 
 /obj/item/mecha_parts/part/odysseus_head
 	name = "\improper Odysseus head"
@@ -98,10 +101,7 @@
 
 /obj/item/mecha_parts/chassis/gygax
 	name = "\improper Gygax chassis"
-
-/obj/item/mecha_parts/chassis/gygax/Initialize()
-	. = ..()
-	construct = new /datum/construction/mecha/gygax_chassis(src)
+	construct_type = /datum/component/construction/unordered/mecha_chassis/gygax
 
 /obj/item/mecha_parts/part/gygax_torso
 	name = "\improper Gygax torso"
@@ -144,10 +144,7 @@
 
 /obj/item/mecha_parts/chassis/durand
 	name = "\improper Durand chassis"
-
-/obj/item/mecha_parts/chassis/durand/Initialize()
-	. = ..()
-	construct = new /datum/construction/mecha/durand_chassis(src)
+	construct_type = /datum/component/construction/unordered/mecha_chassis/durand
 
 /obj/item/mecha_parts/part/durand_torso
 	name = "\improper Durand torso"
@@ -171,12 +168,12 @@
 
 /obj/item/mecha_parts/part/durand_left_leg
 	name = "\improper Durand left leg"
-	desc = "A Durand left leg. Built particlarly sturdy to support the Durand's heavy weight and defensive needs."
+	desc = "A Durand left leg. Built particularly sturdy to support the Durand's heavy weight and defensive needs."
 	icon_state = "durand_l_leg"
 
 /obj/item/mecha_parts/part/durand_right_leg
 	name = "\improper Durand right leg"
-	desc = "A Durand right leg. Built particlarly sturdy to support the Durand's heavy weight and defensive needs."
+	desc = "A Durand right leg. Built particularly sturdy to support the Durand's heavy weight and defensive needs."
 	icon_state = "durand_r_leg"
 
 /obj/item/mecha_parts/part/durand_armor
@@ -185,24 +182,37 @@
 	desc = "A set of armor plates for the Durand. Built heavy to resist an incredible amount of brute force."
 	icon_state = "durand_armor"
 
-////////// Firefighter
+////////// Clarke
 
-/obj/item/mecha_parts/chassis/firefighter
-	name = "Firefighter chassis"
+/obj/item/mecha_parts/chassis/clarke
+	name = "\improper Clarke chassis"
+	construct_type = /datum/component/construction/unordered/mecha_chassis/clarke
 
-/obj/item/mecha_parts/chassis/firefighter/Initialize()
-	. = ..()
-	construct = new /datum/construction/mecha/firefighter_chassis(src)
+/obj/item/mecha_parts/part/clarke_torso
+	name = "\improper Clarke torso"
+	desc = "A torso part of Clarke. Contains power unit, processing core and life support systems."
+	icon_state = "clarke_harness"
 
+/obj/item/mecha_parts/part/clarke_head
+	name = "\improper Clarke head"
+	desc = "A Clarke head. Contains an integrated diagnostic HUD scanner."
+	icon_state = "clarke_head"
+
+/obj/item/mecha_parts/part/clarke_left_arm
+	name = "\improper Clarke left arm"
+	desc = "A Clarke left arm. Data and power sockets are compatible with most exosuit tools."
+	icon_state = "clarke_l_arm"
+
+/obj/item/mecha_parts/part/clarke_right_arm
+	name = "\improper Clarke right arm"
+	desc = "A Clarke right arm. Data and power sockets are compatible with most exosuit tools."
+	icon_state = "clarke_r_arm"
 
 ////////// HONK
 
 /obj/item/mecha_parts/chassis/honker
 	name = "\improper H.O.N.K chassis"
-
-/obj/item/mecha_parts/chassis/honker/Initialize()
-	. = ..()
-	construct = new /datum/construction/mecha/honker_chassis(src)
+	construct_type = /datum/component/construction/unordered/mecha_chassis/honker
 
 /obj/item/mecha_parts/part/honker_torso
 	name = "\improper H.O.N.K torso"
@@ -239,10 +249,12 @@
 
 /obj/item/mecha_parts/chassis/phazon
 	name = "\improper Phazon chassis"
+	construct_type = /datum/component/construction/unordered/mecha_chassis/phazon
 
-/obj/item/mecha_parts/chassis/phazon/Initialize()
+/obj/item/mecha_parts/chassis/phazon/attackby(obj/item/I, mob/user, params)
 	. = ..()
-	construct = new /datum/construction/mecha/phazon_chassis(src)
+	if(istype(I, /obj/item/assembly/signaler/anomaly) && !istype(I, /obj/item/assembly/signaler/anomaly/bluespace))
+		to_chat(user, "The anomaly core socket only accepts bluespace anomaly cores!")
 
 /obj/item/mecha_parts/part/phazon_torso
 	name="\improper Phazon torso"
@@ -286,7 +298,7 @@
 	name = "exosuit circuit board"
 	icon = 'icons/obj/module.dmi'
 	icon_state = "std_mod"
-	item_state = "electronic"
+	inhand_icon_state = "electronic"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
 	flags_1 = CONDUCT_1
@@ -359,3 +371,11 @@
 
 /obj/item/circuitboard/mecha/phazon/main
 	name = "Phazon Central Control module (Exosuit Board)"
+
+/obj/item/circuitboard/mecha/clarke/peripherals
+	name = "Clarke Peripherals Control module (Exosuit Board)"
+	icon_state = "mcontroller"
+
+/obj/item/circuitboard/mecha/clarke/main
+	name = "Clarke Central Control module (Exosuit Board)"
+	icon_state = "mainboard"

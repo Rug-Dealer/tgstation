@@ -2,7 +2,7 @@
 	name = "pizza bomb"
 	desc = "Special delivery!"
 	icon_state = "pizzabomb_inactive"
-	item_state = "eshield0"
+	inhand_icon_state = "eshield0"
 	lefthand_file = 'icons/mob/inhands/equipment/shields_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/shields_righthand.dmi'
 
@@ -11,7 +11,7 @@
 	desc = "A box suited for pizzas."
 	icon = 'icons/obj/food/containers.dmi'
 	icon_state = "pizzabox"
-	item_state = "pizzabox"
+	inhand_icon_state = "pizzabox"
 	lefthand_file = 'icons/mob/inhands/misc/food_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/food_righthand.dmi'
 
@@ -91,7 +91,7 @@
 	var/current_offset = 2
 	if(isinhands)
 		for(var/V in boxes) //add EXTRA BOX per box
-			var/mutable_appearance/M = mutable_appearance(icon_file, item_state)
+			var/mutable_appearance/M = mutable_appearance(icon_file, inhand_icon_state)
 			M.pixel_y = current_offset
 			current_offset += 2
 			. += M
@@ -106,17 +106,16 @@
 		START_PROCESSING(SSobj, src)
 	update_icon()
 
+//ATTACK HAND IGNORING PARENT RETURN VALUE
 /obj/item/pizzabox/attack_hand(mob/user)
 	if(user.get_inactive_held_item() != src)
-		..()
-		return
+		return ..()
 	if(open)
 		if(pizza)
 			user.put_in_hands(pizza)
 			to_chat(user, "<span class='notice'>You take [pizza] out of [src].</span>")
 			pizza = null
 			update_icon()
-			return
 		else if(bomb)
 			if(wires.is_all_cut() && bomb_defused)
 				user.put_in_hands(bomb)
@@ -125,19 +124,19 @@
 				update_icon()
 				return
 			else
-				bomb_timer = input(user, "Set the [bomb] timer from [BOMB_TIMER_MIN] to [BOMB_TIMER_MAX].", bomb, bomb_timer) as num
-				bomb_timer = CLAMP(CEILING(bomb_timer / 2, 1), BOMB_TIMER_MIN, BOMB_TIMER_MAX)
+				bomb_timer = input(user, "Set the [bomb] timer from [BOMB_TIMER_MIN] to [BOMB_TIMER_MAX].", bomb, bomb_timer) as num|null
+
+				if (isnull(bomb_timer))
+					return
+
+				bomb_timer = clamp(CEILING(bomb_timer / 2, 1), BOMB_TIMER_MIN, BOMB_TIMER_MAX)
 				bomb_defused = FALSE
 
-				var/message = "[ADMIN_LOOKUPFLW(user)] has trapped a [src] with [bomb] set to [bomb_timer * 2] seconds."
-				GLOB.bombers += message
-				message_admins(message)
-				log_game("[key_name(user)] has trapped a [src] with [bomb] set to [bomb_timer * 2] seconds.")
+				log_bomber(user, "has trapped a", src, "with [bomb] set to [bomb_timer * 2] seconds")
 				bomb.adminlog = "The [bomb.name] in [src.name] that [key_name(user)] activated has detonated!"
 
 				to_chat(user, "<span class='warning'>You trap [src] with [bomb].</span>")
 				update_icon()
-			return
 	else if(boxes.len)
 		var/obj/item/pizzabox/topbox = boxes[boxes.len]
 		boxes -= topbox
@@ -146,8 +145,6 @@
 		topbox.update_icon()
 		update_icon()
 		user.regenerate_icons()
-		return
-	..()
 
 /obj/item/pizzabox/attackby(obj/item/I, mob/user, params)
 	if(istype(I, /obj/item/pizzabox))
@@ -194,11 +191,16 @@
 			update_icon()
 			return
 		else if(bomb)
-			to_chat(user, "<span class='notice'>[src] already has a bomb in it!</span>")
+			to_chat(user, "<span class='warning'>[src] already has a bomb in it!</span>")
 	else if(istype(I, /obj/item/pen))
 		if(!open)
+			if(!user.is_literate())
+				to_chat(user, "<span class='notice'>You scribble illegibly on [src]!</span>")
+				return
 			var/obj/item/pizzabox/box = boxes.len ? boxes[boxes.len] : src
 			box.boxtag += stripped_input(user, "Write on [box]'s tag:", box, "", 30)
+			if(!user.canUseTopic(src, BE_CLOSE))
+				return
 			to_chat(user, "<span class='notice'>You write with [I] on [src].</span>")
 			update_icon()
 			return
@@ -211,7 +213,7 @@
 
 /obj/item/pizzabox/process()
 	if(bomb_active && !bomb_defused && (bomb_timer > 0))
-		playsound(loc, 'sound/items/timer.ogg', 50, 0)
+		playsound(loc, 'sound/items/timer.ogg', 50, FALSE)
 		bomb_timer--
 	if(bomb_active && !bomb_defused && (bomb_timer <= 0))
 		if(bomb in src)
@@ -219,7 +221,7 @@
 			unprocess()
 			qdel(src)
 	if(!bomb_active || bomb_defused)
-		if(bomb_defused && bomb in src)
+		if(bomb_defused && (bomb in src))
 			bomb.defuse()
 			bomb_active = FALSE
 			unprocess()
@@ -230,7 +232,7 @@
 	if(boxes.len >= 3 && prob(25 * boxes.len))
 		disperse_pizzas()
 
-/obj/item/pizzabox/throw_impact(atom/movable/AM)
+/obj/item/pizzabox/throw_impact(atom/hit_atom, datum/thrownthing/throwingdatum)
 	if(boxes.len >= 2 && prob(20 * boxes.len))
 		disperse_pizzas()
 
@@ -268,9 +270,14 @@
 
 /obj/item/pizzabox/margherita/Initialize()
 	. = ..()
-	pizza = new /obj/item/reagent_containers/food/snacks/pizza/margherita(src)
+	AddPizza()
 	boxtag = "Margherita Deluxe"
 
+/obj/item/pizzabox/margherita/proc/AddPizza()
+	pizza = new /obj/item/reagent_containers/food/snacks/pizza/margherita(src)
+
+/obj/item/pizzabox/margherita/robo/AddPizza()
+	pizza = new /obj/item/reagent_containers/food/snacks/pizza/margherita/robo(src)
 
 /obj/item/pizzabox/vegetable/Initialize()
 	. = ..()
@@ -313,9 +320,9 @@
 		pizza_preferences = list()
 
 /obj/item/pizzabox/infinite/examine(mob/user)
-	..()
+	. = ..()
 	if(isobserver(user))
-		to_chat(user, "<span class='deadsay'>This pizza box is anomalous, and will produce infinite pizza.</span>")
+		. += "<span class='deadsay'>This pizza box is anomalous, and will produce infinite pizza.</span>"
 
 /obj/item/pizzabox/infinite/attack_self(mob/living/user)
 	QDEL_NULL(pizza)
@@ -326,7 +333,13 @@
 /obj/item/pizzabox/infinite/proc/attune_pizza(mob/living/carbon/human/noms) //tonight on "proc names I never thought I'd type"
 	if(!pizza_preferences[noms.ckey])
 		pizza_preferences[noms.ckey] = pickweight(pizza_types)
-		if(noms.mind && noms.mind.assigned_role == "Botanist")
+		if(noms.has_quirk(/datum/quirk/pineapple_liker))
+			pizza_preferences[noms.ckey] = /obj/item/reagent_containers/food/snacks/pizza/pineapple
+		else if(noms.has_quirk(/datum/quirk/pineapple_hater))
+			var/list/pineapple_pizza_liker = pizza_types.Copy()
+			pineapple_pizza_liker -= /obj/item/reagent_containers/food/snacks/pizza/pineapple
+			pizza_preferences[noms.ckey] = pickweight(pineapple_pizza_liker)
+		else if(noms.mind && noms.mind.assigned_role == "Botanist")
 			pizza_preferences[noms.ckey] = /obj/item/reagent_containers/food/snacks/pizza/dank
 
 	var/obj/item/pizza_type = pizza_preferences[noms.ckey]

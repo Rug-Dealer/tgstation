@@ -23,44 +23,45 @@
 /obj/structure/ladder/Destroy(force)
 	if ((resistance_flags & INDESTRUCTIBLE) && !force)
 		return QDEL_HINT_LETMELIVE
+	disconnect()
+	return ..()
 
+/obj/structure/ladder/LateInitialize()
+	// By default, discover ladders above and below us vertically
+	var/turf/T = get_turf(src)
+	var/obj/structure/ladder/L
+
+	if (!down)
+		L = locate() in SSmapping.get_turf_below(T)
+		if (L)
+			down = L
+			L.up = src  // Don't waste effort looping the other way
+			L.update_icon()
+	if (!up)
+		L = locate() in SSmapping.get_turf_above(T)
+		if (L)
+			up = L
+			L.down = src  // Don't waste effort looping the other way
+			L.update_icon()
+
+	update_icon()
+
+/obj/structure/ladder/proc/disconnect()
 	if(up && up.down == src)
 		up.down = null
 		up.update_icon()
 	if(down && down.up == src)
 		down.up = null
 		down.update_icon()
-	return ..()
+	up = down = null
 
-/obj/structure/ladder/LateInitialize()
-	// By default, discover ladders above and below us vertically
-	var/turf/T = get_turf(src)
-
-	if (!down)
-		for (var/obj/structure/ladder/L in locate(T.x, T.y, T.z - 1))
-			down = L
-			L.up = src  // Don't waste effort looping the other way
-			L.update_icon()
-			break
-	if (!up)
-		for (var/obj/structure/ladder/L in locate(T.x, T.y, T.z + 1))
-			up = L
-			L.down = src  // Don't waste effort looping the other way
-			L.update_icon()
-			break
-
-	update_icon()
-
-/obj/structure/ladder/update_icon()
+/obj/structure/ladder/update_icon_state()
 	if(up && down)
 		icon_state = "ladder11"
-
 	else if(up)
 		icon_state = "ladder10"
-
 	else if(down)
 		icon_state = "ladder01"
-
 	else	//wtf make your ladders properly assholes
 		icon_state = "ladder00"
 
@@ -87,8 +88,13 @@
 	if (!is_ghost && !in_range(src, user))
 		return
 
+	var/list/tool_list = list(
+		"Up" = image(icon = 'icons/testing/turf_analysis.dmi', icon_state = "red_arrow", dir = NORTH),
+		"Down" = image(icon = 'icons/testing/turf_analysis.dmi', icon_state = "red_arrow", dir = SOUTH)
+		)
+
 	if (up && down)
-		var/result = alert("Go up or down [src]?", "Ladder", "Up", "Down", "Cancel")
+		var/result = show_radial_menu(user, src, tool_list, custom_check = CALLBACK(src, .proc/check_menu, user), require_near = TRUE, tooltips = TRUE)
 		if (!is_ghost && !in_range(src, user))
 			return  // nice try
 		switch(result)
@@ -108,7 +114,15 @@
 	if(!is_ghost)
 		add_fingerprint(user)
 
+/obj/structure/ladder/proc/check_menu(mob/user)
+	if(user.incapacitated() || !user.Adjacent(src))
+		return FALSE
+	return TRUE
+
 /obj/structure/ladder/attack_hand(mob/user)
+	. = ..()
+	if(.)
+		return
 	use(user)
 
 /obj/structure/ladder/attack_paw(mob/user)
@@ -121,14 +135,16 @@
 	if(R.Adjacent(src))
 		return use(R)
 
+//ATTACK GHOST IGNORING PARENT RETURN VALUE
 /obj/structure/ladder/attack_ghost(mob/dead/observer/user)
 	use(user, TRUE)
+	return ..()
 
 /obj/structure/ladder/proc/show_fluff_message(going_up, mob/user)
 	if(going_up)
-		user.visible_message("[user] climbs up [src].","<span class='notice'>You climb up [src].</span>")
+		user.visible_message("<span class='notice'>[user] climbs up [src].</span>", "<span class='notice'>You climb up [src].</span>")
 	else
-		user.visible_message("[user] climbs down [src].","<span class='notice'>You climb down [src].</span>")
+		user.visible_message("<span class='notice'>[user] climbs down [src].</span>", "<span class='notice'>You climb down [src].</span>")
 
 
 // Indestructible away mission ladders which link based on a mapped ID and height value rather than X/Y/Z.

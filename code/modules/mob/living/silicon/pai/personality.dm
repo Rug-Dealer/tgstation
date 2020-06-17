@@ -8,7 +8,7 @@
 */
 
 /datum/paiCandidate/proc/savefile_path(mob/user)
-	return "data/player_saves/[copytext(user.ckey, 1, 2)]/[user.ckey]/pai.sav"
+	return "data/player_saves/[user.ckey[1]]/[user.ckey]/pai.sav"
 
 /datum/paiCandidate/proc/savefile_save(mob/user)
 	if(IsGuestKey(user.key))
@@ -31,7 +31,7 @@
 // returns 1 if loaded (or file was incompatible)
 // returns 0 if savefile did not exist
 
-/datum/paiCandidate/proc/savefile_load(mob/user, silent = 1)
+/datum/paiCandidate/proc/savefile_load(mob/user, silent = TRUE)
 	if (IsGuestKey(user.key))
 		return 0
 

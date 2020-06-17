@@ -8,9 +8,13 @@
 /*
  * Stacks
  */
+
+
 /obj/item/stack
 	icon = 'icons/obj/stack_objects.dmi'
 	gender = PLURAL
+	material_modifier = 0.01
+	max_integrity = 100
 	var/list/datum/stack_recipe/recipes
 	var/singular_name
 	var/amount = 1
@@ -21,7 +25,20 @@
 	var/merge_type = null // This path and its children should merge with this stack, defaults to src.type
 	var/full_w_class = WEIGHT_CLASS_NORMAL //The weight class the stack should have at amount > 2/3rds max_amount
 	var/novariants = TRUE //Determines whether the item should update it's sprites based on amount.
+	var/list/mats_per_unit //list that tells you how much is in a single unit.
+	///Datum material type that this stack is made of
+	var/material_type
 	//NOTE: When adding grind_results, the amounts should be for an INDIVIDUAL ITEM - these amounts will be multiplied by the stack size in on_grind()
+	var/obj/structure/table/tableVariant // we tables now (stores table variant to be built from this stack)
+
+		// The following are all for medical treatment, they're here instead of /stack/medical because sticky tape can be used as a makeshift bandage or splint
+	/// If set and this used as a splint for a broken bone wound, this is used as a multiplier for applicable slowdowns (lower = better) (also for speeding up burn recoveries)
+	var/splint_factor
+	/// How much blood flow this stack can absorb if used as a bandage on a cut wound, note that absorption is how much we lower the flow rate, not the raw amount of blood we suck up
+	var/absorption_capacity
+	/// How quickly we lower the blood flow on a cut wound we're bandaging. Expected lifetime of this bandage in ticks is thus absorption_capacity/absorption_rate, or until the cut heals, whichever comes first
+	var/absorption_rate
+
 
 /obj/item/stack/on_grind()
 	for(var/i in 1 to grind_results.len) //This should only call if it's ground, so no need to check if grind_results exists
@@ -29,41 +46,63 @@
 
 /obj/item/stack/grind_requirements()
 	if(is_cyborg)
-		to_chat(usr, "<span class='danger'>[src] is electronically synthesized in your chassis and can't be ground up!</span>")
+		to_chat(usr, "<span class='warning'>[src] is electronically synthesized in your chassis and can't be ground up!</span>")
 		return
 	return TRUE
 
-/obj/item/stack/Initialize(mapload, new_amount=null , merge = TRUE)
-	. = ..()
-	if(new_amount)
+/obj/item/stack/Initialize(mapload, new_amount, merge = TRUE)
+	if(new_amount != null)
 		amount = new_amount
+	while(amount > max_amount)
+		amount -= max_amount
+		new type(loc, max_amount, FALSE)
 	if(!merge_type)
 		merge_type = type
+	if(custom_materials && custom_materials.len)
+		mats_per_unit = list()
+		var/in_process_mat_list = custom_materials.Copy()
+		for(var/i in custom_materials)
+			mats_per_unit[SSmaterials.GetMaterialRef(i)] = in_process_mat_list[i]
+			custom_materials[i] *= amount
+	. = ..()
 	if(merge)
 		for(var/obj/item/stack/S in loc)
 			if(S.merge_type == merge_type)
 				merge(S)
+	var/list/temp_recipes = get_main_recipes()
+	recipes = temp_recipes.Copy()
+	if(material_type)
+		var/datum/material/M = SSmaterials.GetMaterialRef(material_type) //First/main material
+		for(var/i in M.categories)
+			switch(i)
+				if(MAT_CATEGORY_BASE_RECIPES)
+					var/list/temp = SSmaterials.rigid_stack_recipes.Copy()
+					recipes += temp
 	update_weight()
 	update_icon()
 
+/obj/item/stack/proc/get_main_recipes()
+	SHOULD_CALL_PARENT(1)
+	return list()//empty list
+
 /obj/item/stack/proc/update_weight()
 	if(amount <= (max_amount * (1/3)))
-		w_class = CLAMP(full_w_class-2, WEIGHT_CLASS_TINY, full_w_class)
+		w_class = clamp(full_w_class-2, WEIGHT_CLASS_TINY, full_w_class)
 	else if (amount <= (max_amount * (2/3)))
-		w_class = CLAMP(full_w_class-1, WEIGHT_CLASS_TINY, full_w_class)
+		w_class = clamp(full_w_class-1, WEIGHT_CLASS_TINY, full_w_class)
 	else
 		w_class = full_w_class
 
-/obj/item/stack/update_icon()
+
+/obj/item/stack/update_icon_state()
 	if(novariants)
-		return ..()
+		return
 	if(amount <= (max_amount * (1/3)))
 		icon_state = initial(icon_state)
 	else if (amount <= (max_amount * (2/3)))
 		icon_state = "[initial(icon_state)]_2"
 	else
 		icon_state = "[initial(icon_state)]_3"
-	..()
 
 
 /obj/item/stack/Destroy()
@@ -72,23 +111,23 @@
 	. = ..()
 
 /obj/item/stack/examine(mob/user)
-	..()
+	. = ..()
 	if (is_cyborg)
 		if(singular_name)
-			to_chat(user, "There is enough energy for [get_amount()] [singular_name]\s.")
+			. += "There is enough energy for [get_amount()] [singular_name]\s."
 		else
-			to_chat(user, "There is enough energy for [get_amount()].")
+			. += "There is enough energy for [get_amount()]."
 		return
 	if(singular_name)
 		if(get_amount()>1)
-			to_chat(user, "There are [get_amount()] [singular_name]\s in the stack.")
+			. += "There are [get_amount()] [singular_name]\s in the stack."
 		else
-			to_chat(user, "There is [get_amount()] [singular_name] in the stack.")
+			. += "There is [get_amount()] [singular_name] in the stack."
 	else if(get_amount()>1)
-		to_chat(user, "There are [get_amount()] in the stack.")
+		. += "There are [get_amount()] in the stack."
 	else
-		to_chat(user, "There is [get_amount()] in the stack.")
-	to_chat(user, "<span class='notice'>Alt-click to take a custom amount.</span>")
+		. += "There is [get_amount()] in the stack."
+	. += "<span class='notice'>Alt-click to take a custom amount.</span>"
 
 /obj/item/stack/proc/get_amount()
 	if(is_cyborg)
@@ -99,7 +138,11 @@
 /obj/item/stack/attack_self(mob/user)
 	interact(user)
 
-/obj/item/stack/interact(mob/user, recipes_sublist)
+/obj/item/stack/interact(mob/user, sublist)
+	ui_interact(user, sublist)
+
+/obj/item/stack/ui_interact(mob/user, recipes_sublist)
+	. = ..()
 	if (!recipes)
 		return
 	if (!src || get_amount() <= 0)
@@ -125,7 +168,7 @@
 		if (istype(E, /datum/stack_recipe))
 			var/datum/stack_recipe/R = E
 			var/max_multiplier = round(get_amount() / R.req_amount)
-			var/title as text
+			var/title
 			var/can_build = 1
 			can_build = can_build && (max_multiplier>0)
 
@@ -151,7 +194,7 @@
 
 	var/datum/browser/popup = new(user, "stack", name, 400, 400)
 	popup.set_content(t1)
-	popup.open(0)
+	popup.open(FALSE)
 	onclose(user, "stack")
 
 /obj/item/stack/Topic(href, href_list)
@@ -175,8 +218,13 @@
 		if(!building_checks(R, multiplier))
 			return
 		if (R.time)
-			usr.visible_message("<span class='notice'>[usr] starts building [R.title].</span>", "<span class='notice'>You start building [R.title]...</span>")
-			if (!do_after(usr, R.time, target = usr))
+			var/adjusted_time = 0
+			usr.visible_message("<span class='notice'>[usr] starts building \a [R.title].</span>", "<span class='notice'>You start building \a [R.title]...</span>")
+			if(HAS_TRAIT(usr, R.trait_booster))
+				adjusted_time = (R.time * R.trait_modifier)
+			else
+				adjusted_time = R.time
+			if (!do_after(usr, adjusted_time, target = usr))
 				return
 			if(!building_checks(R, multiplier))
 				return
@@ -184,10 +232,22 @@
 		var/obj/O
 		if(R.max_res_amount > 1) //Is it a stack?
 			O = new R.result_type(usr.drop_location(), R.res_amount * multiplier)
+		else if(ispath(R.result_type, /turf))
+			var/turf/T = usr.drop_location()
+			if(!isturf(T))
+				return
+			T.PlaceOnTop(R.result_type, flags = CHANGETURF_INHERIT_AIR)
 		else
 			O = new R.result_type(usr.drop_location())
-		O.setDir(usr.dir)
+		if(O)
+			O.setDir(usr.dir)
 		use(R.req_amount * multiplier)
+
+		if(R.applies_mats && custom_materials && custom_materials.len)
+			var/list/used_materials = list()
+			for(var/i in custom_materials)
+				used_materials[SSmaterials.GetMaterialRef(i)] = R.req_amount / R.res_amount * (MINERAL_MATERIAL_AMOUNT / custom_materials.len)
+			O.set_custom_materials(used_materials)
 
 		//START: oh fuck i'm so sorry
 		if(istype(O, /obj/structure/windoor_assembly))
@@ -200,8 +260,7 @@
 
 		else if(istype(O, /obj/item/restraints/handcuffs/cable))
 			var/obj/item/cuffs = O
-			cuffs.item_color = item_color
-			cuffs.update_icon()
+			cuffs.color = color
 
 		if (QDELETED(O))
 			return //It's a stack and has already been merged
@@ -222,43 +281,65 @@
 			to_chat(usr, "<span class='warning'>You haven't got enough [src] to build \the [R.req_amount*multiplier] [R.title]\s!</span>")
 		else
 			to_chat(usr, "<span class='warning'>You haven't got enough [src] to build \the [R.title]!</span>")
-		return 0
-	if(R.window_checks && !valid_window_location(usr.loc, usr.dir))
+		return FALSE
+	var/turf/T = get_turf(usr)
+
+	var/obj/D = R.result_type
+	if(R.window_checks && !valid_window_location(T, initial(D.dir) == FULLTILE_WINDOW_DIR ? FULLTILE_WINDOW_DIR : usr.dir))
 		to_chat(usr, "<span class='warning'>The [R.title] won't fit here!</span>")
-		return 0
-	if(R.one_per_turf && (locate(R.result_type) in usr.loc))
+		return FALSE
+	if(R.one_per_turf && (locate(R.result_type) in T))
 		to_chat(usr, "<span class='warning'>There is another [R.title] here!</span>")
-		return 0
-	if(R.on_floor && !isfloorturf(usr.loc))
-		to_chat(usr, "<span class='warning'>\The [R.title] must be constructed on the floor!</span>")
-		return 0
+		return FALSE
+	if(R.on_floor)
+		if(!isfloorturf(T))
+			to_chat(usr, "<span class='warning'>\The [R.title] must be constructed on the floor!</span>")
+			return FALSE
+		for(var/obj/AM in T)
+			if(istype(AM,/obj/structure/grille))
+				continue
+			if(istype(AM,/obj/structure/table))
+				continue
+			if(istype(AM,/obj/structure/window))
+				var/obj/structure/window/W = AM
+				if(!W.fulltile)
+					continue
+			if(AM.density)
+				to_chat(usr, "<span class='warning'>Theres a [AM.name] here. You cant make a [R.title] here!</span>")
+				return FALSE
 	if(R.placement_checks)
 		switch(R.placement_checks)
 			if(STACK_CHECK_CARDINALS)
 				var/turf/step
 				for(var/direction in GLOB.cardinals)
-					step = get_step(usr, direction)
+					step = get_step(T, direction)
 					if(locate(R.result_type) in step)
 						to_chat(usr, "<span class='warning'>\The [R.title] must not be built directly adjacent to another!</span>")
-						return 0
+						return FALSE
 			if(STACK_CHECK_ADJACENT)
-				if(locate(R.result_type) in range(1, usr))
+				if(locate(R.result_type) in range(1, T))
 					to_chat(usr, "<span class='warning'>\The [R.title] must be constructed at least one tile away from others of its type!</span>")
-					return 0
-	return 1
+					return FALSE
+	return TRUE
 
-/obj/item/stack/use(used, transfer = FALSE) // return 0 = borked; return 1 = had enough
-	if(zero_amount())
-		return 0
+/obj/item/stack/use(used, transfer = FALSE, check = TRUE) // return 0 = borked; return 1 = had enough
+	if(check && zero_amount())
+		return FALSE
 	if (is_cyborg)
 		return source.use_charge(used * cost)
 	if (amount < used)
-		return 0
+		return FALSE
 	amount -= used
-	zero_amount()
+	if(check && zero_amount())
+		return TRUE
+	if(length(mats_per_unit))
+		var/temp_materials = custom_materials.Copy()
+		for(var/i in mats_per_unit)
+			temp_materials[i] = mats_per_unit[i] * src.amount
+		set_custom_materials(temp_materials)
 	update_icon()
 	update_weight()
-	return 1
+	return TRUE
 
 /obj/item/stack/tool_use_check(mob/living/user, amount)
 	if(get_amount() < amount)
@@ -287,6 +368,11 @@
 		source.add_charge(amount * cost)
 	else
 		src.amount += amount
+	if(length(mats_per_unit))
+		var/temp_materials = custom_materials.Copy()
+		for(var/i in mats_per_unit)
+			temp_materials[i] = mats_per_unit[i] * src.amount
+		set_custom_materials(temp_materials)
 	update_icon()
 	update_weight()
 
@@ -305,29 +391,30 @@
 	S.add(transfer)
 	return transfer
 
-/obj/item/stack/Crossed(obj/o)
-	if(istype(o, merge_type) && !o.throwing)
-		merge(o)
+/obj/item/stack/Crossed(atom/movable/AM)
+	if(istype(AM, merge_type) && !AM.throwing)
+		merge(AM)
 	. = ..()
 
-/obj/item/stack/hitby(atom/movable/AM, skip, hitpush)
+/obj/item/stack/hitby(atom/movable/AM, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
 	if(istype(AM, merge_type))
 		merge(AM)
 	. = ..()
 
+//ATTACK HAND IGNORING PARENT RETURN VALUE
 /obj/item/stack/attack_hand(mob/user)
-	if (user.get_inactive_held_item() == src)
+	if(user.get_inactive_held_item() == src)
 		if(zero_amount())
 			return
 		return change_stack(user,1)
 	else
-		..()
+		. = ..()
 
 /obj/item/stack/AltClick(mob/living/user)
-	if(!istype(user) || !user.canUseTopic(src))
-		to_chat(user, "<span class='warning'>You can't do that right now!</span>")
+	. = ..()
+	if(isturf(loc)) // to prevent people that are alt clicking a tile to see its content from getting undesidered pop ups
 		return
-	if(!in_range(src, user))
+	if(!istype(user) || !user.canUseTopic(src, BE_CLOSE, ismonkey(user)))
 		return
 	if(is_cyborg)
 		return
@@ -335,25 +422,28 @@
 		if(zero_amount())
 			return
 		//get amount from user
-		var/min = 0
 		var/max = get_amount()
-		var/stackmaterial = round(input(user,"How many sheets do you wish to take out of this stack? (Maximum  [max])") as num)
-		if(stackmaterial == null || stackmaterial <= min || stackmaterial >= get_amount() || !user.canUseTopic(src))
+		var/stackmaterial = round(input(user,"How many sheets do you wish to take out of this stack? (Maximum  [max])") as null|num)
+		max = get_amount()
+		stackmaterial = min(max, stackmaterial)
+		if(stackmaterial == null || stackmaterial <= 0 || !user.canUseTopic(src, BE_CLOSE, ismonkey(user)))
 			return
 		else
-			change_stack(user,stackmaterial)
-			to_chat(user, "<span class='notice'>You take [stackmaterial] sheets out of the stack</span>")
+			change_stack(user, stackmaterial)
+			to_chat(user, "<span class='notice'>You take [stackmaterial] sheets out of the stack.</span>")
 
-/obj/item/stack/proc/change_stack(mob/user,amount)
-	var/obj/item/stack/F = new type(user, amount, FALSE)
+/obj/item/stack/proc/change_stack(mob/user, amount)
+	if(!use(amount, TRUE, FALSE))
+		return FALSE
+	var/obj/item/stack/F = new type(user? user : drop_location(), amount, FALSE)
 	. = F
 	F.copy_evidences(src)
-	user.put_in_hands(F, merge_stacks=FALSE)
-	add_fingerprint(user)
-	F.add_fingerprint(user)
-	use(amount, TRUE)
-
-
+	if(user)
+		if(!user.put_in_hands(F, merge_stacks = FALSE))
+			F.forceMove(user.drop_location())
+		add_fingerprint(user)
+		F.add_fingerprint(user)
+	zero_amount()
 
 /obj/item/stack/attackby(obj/item/W, mob/user, params)
 	if(istype(W, merge_type))
@@ -371,7 +461,7 @@
 	//TODO bloody overlay
 
 /obj/item/stack/microwave_act(obj/machinery/microwave/M)
-	if(M && M.dirty < 100)
+	if(istype(M) && M.dirty < 100)
 		M.dirty += amount
 
 /*
@@ -388,8 +478,13 @@
 	var/on_floor = FALSE
 	var/window_checks = FALSE
 	var/placement_checks = FALSE
+	var/applies_mats = FALSE
+	var/trait_booster = null
+	var/trait_modifier = 1
 
-/datum/stack_recipe/New(title, result_type, req_amount = 1, res_amount = 1, max_res_amount = 1, time = 0, one_per_turf = FALSE, on_floor = FALSE, window_checks = FALSE, placement_checks = FALSE)
+/datum/stack_recipe/New(title, result_type, req_amount = 1, res_amount = 1, max_res_amount = 1,time = 0, one_per_turf = FALSE, on_floor = FALSE, window_checks = FALSE, placement_checks = FALSE, applies_mats = FALSE, trait_booster = null, trait_modifier = 1)
+
+
 	src.title = title
 	src.result_type = result_type
 	src.req_amount = req_amount
@@ -400,6 +495,9 @@
 	src.on_floor = on_floor
 	src.window_checks = window_checks
 	src.placement_checks = placement_checks
+	src.applies_mats = applies_mats
+	src.trait_booster = trait_booster
+	src.trait_modifier = trait_modifier
 /*
  * Recipe list datum
  */

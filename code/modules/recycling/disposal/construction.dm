@@ -9,7 +9,6 @@
 	anchored = FALSE
 	density = FALSE
 	pressure_resistance = 5*ONE_ATMOSPHERE
-	level = 2
 	max_integrity = 200
 	var/obj/pipe_type = /obj/structure/disposalpipe/segment
 	var/pipename
@@ -29,10 +28,12 @@
 	pipename = initial(pipe_type.name)
 
 	if(flip)
-		GET_COMPONENT(rotcomp,/datum/component/simple_rotation)
+		var/datum/component/simple_rotation/rotcomp = GetComponent(/datum/component/simple_rotation)
 		rotcomp.BaseRot(null,ROTATION_FLIP)
 
 	update_icon()
+
+	AddElement(/datum/element/undertile, TRAIT_T_RAY_VISIBLE)
 
 /obj/structure/disposalconstruct/Move()
 	var/old_dir = dir
@@ -45,25 +46,16 @@
 	if(is_pipe())
 		icon_state = "con[icon_state]"
 		if(anchored)
-			level = initial(pipe_type.level)
 			layer = initial(pipe_type.layer)
 		else
-			level = initial(level)
 			layer = initial(layer)
 
 	else if(ispath(pipe_type, /obj/machinery/disposal/bin))
-		// Disposal bins recieve special icon treating
+		// Disposal bins receive special icon treating
 		if(anchored)
 			icon_state = "disposal"
 		else
 			icon_state = "condisposal"
-
-
-// hide called by levelupdate if turf intact status changes
-// change visibility status and force update of icon
-/obj/structure/disposalconstruct/hide(var/intact)
-	invisibility = (intact && level==1) ? INVISIBILITY_MAXIMUM: 0	// hide if floor is intact
-	update_icon()
 
 /obj/structure/disposalconstruct/proc/get_disposal_dir()
 	if(!is_pipe())
@@ -106,73 +98,70 @@
 		return FALSE
 	return TRUE
 
-// attackby item
+// construction/deconstruction
 // wrench: (un)anchor
 // weldingtool: convert to real pipe
+/obj/structure/disposalconstruct/wrench_act(mob/living/user, obj/item/I)
+	..()
+	if(anchored)
+		anchored = FALSE
+		density = FALSE
+		to_chat(user, "<span class='notice'>You detach the [pipename] from the underfloor.</span>")
+	else
+		var/ispipe = is_pipe() // Indicates if we should change the level of this pipe
 
-/obj/structure/disposalconstruct/attackby(obj/item/I, mob/user, params)
-	var/ispipe = is_pipe() // Indicates if we should change the level of this pipe
+		var/turf/T = get_turf(src)
+		if(T.intact && isfloorturf(T))
+			to_chat(user, "<span class='warning'>You can only attach the [pipename] if the floor plating is removed!</span>")
+			return TRUE
 
-	add_fingerprint(user)
+		if(!ispipe && iswallturf(T))
+			to_chat(user, "<span class='warning'>You can't build [pipename]s on walls, only disposal pipes!</span>")
+			return TRUE
 
-	var/turf/T = get_turf(src)
-	if(T.intact && isfloorturf(T))
-		to_chat(user, "<span class='warning'>You can only attach the [pipename] if the floor plating is removed!</span>")
-		return
+		if(ispipe)
+			var/dpdir = get_disposal_dir()
+			for(var/obj/structure/disposalpipe/CP in T)
+				var/pdir = CP.dpdir
+				if(istype(CP, /obj/structure/disposalpipe/broken))
+					pdir = CP.dir
+				if(pdir & dpdir)
+					to_chat(user, "<span class='warning'>There is already a disposal pipe at that location!</span>")
+					return TRUE
 
-	if(!ispipe && iswallturf(T))
-		to_chat(user, "<span class='warning'>You can't build [pipename]s on walls, only disposal pipes!</span>")
-		return
+		else	// Disposal or outlet
+			var/found_trunk = FALSE
+			for(var/obj/structure/disposalpipe/CP in T)
+				if(istype(CP, /obj/structure/disposalpipe/trunk))
+					found_trunk = TRUE
+					break
 
-	if(istype(I, /obj/item/wrench))
-		if(anchored)
-			anchored = FALSE
-			density = FALSE
-			to_chat(user, "<span class='notice'>You detach the [pipename] from the underfloor.</span>")
-		else
-			if(ispipe)
-				var/dpdir = get_disposal_dir()
-				for(var/obj/structure/disposalpipe/CP in T)
-					var/pdir = CP.dpdir
-					if(istype(CP, /obj/structure/disposalpipe/broken))
-						pdir = CP.dir
-					if(pdir & dpdir)
-						to_chat(user, "<span class='warning'>There is already a disposal pipe at that location!</span>")
-						return
-				level = 1 // Pipes only, don't want disposal bins to disappear under the floors
+			if(!found_trunk)
+				to_chat(user, "<span class='warning'>The [pipename] requires a trunk underneath it in order to work!</span>")
+				return TRUE
 
-			else	// Disposal or outlet
-				var/found_trunk = FALSE
-				for(var/obj/structure/disposalpipe/CP in T)
-					if(istype(CP, /obj/structure/disposalpipe/trunk))
-						found_trunk = TRUE
-						break
+		anchored = TRUE
+		density = initial(pipe_type.density)
+		to_chat(user, "<span class='notice'>You attach the [pipename] to the underfloor.</span>")
+	I.play_tool_sound(src, 100)
+	update_icon()
+	return TRUE
 
-				if(!found_trunk)
-					to_chat(user, "<span class='warning'>The [pipename] requires a trunk underneath it in order to work!</span>")
-					return
+/obj/structure/disposalconstruct/welder_act(mob/living/user, obj/item/I)
+	..()
+	if(anchored)
+		if(!I.tool_start_check(user, amount=0))
+			return TRUE
 
-			anchored = TRUE
-			density = initial(pipe_type.density)
-			to_chat(user, "<span class='notice'>You attach the [pipename] to the underfloor.</span>")
-		playsound(src, I.usesound, 100, 1)
-		update_icon()
+		to_chat(user, "<span class='notice'>You start welding the [pipename] in place...</span>")
+		if(I.use_tool(src, user, 8, volume=50))
+			to_chat(user, "<span class='notice'>The [pipename] has been welded in place.</span>")
+			var/obj/O = new pipe_type(loc, src)
+			transfer_fingerprints_to(O)
 
-	else if(istype(I, /obj/item/weldingtool))
-		if(anchored)
-			if(!I.tool_start_check(user, amount=0))
-				return
-
-			to_chat(user, "<span class='notice'>You start welding the [pipename] in place...</span>")
-			if(I.use_tool(src, user, 8, volume=50))
-				to_chat(user, "<span class='notice'>The [pipename] has been welded in place.</span>")
-				var/obj/O = new pipe_type(loc, src)
-				transfer_fingerprints_to(O)
-
-			return
-		else
-			to_chat(user, "<span class='warning'>You need to attach it to the plating first!</span>")
-			return
+	else
+		to_chat(user, "<span class='warning'>You need to attach it to the plating first!</span>")
+	return TRUE
 
 /obj/structure/disposalconstruct/proc/is_pipe()
 	return ispath(pipe_type, /obj/structure/disposalpipe)

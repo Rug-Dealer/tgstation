@@ -5,7 +5,8 @@
 	icon_state = "implantchair"
 	density = TRUE
 	opacity = 0
-	anchored = TRUE
+	ui_x = 375
+	ui_y = 280
 
 	var/ready = TRUE
 	var/replenishing = FALSE
@@ -31,7 +32,7 @@
 /obj/machinery/implantchair/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.notcontained_state)
 	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "implantchair", name, 375, 280, master_ui, state)
+		ui = new(user, src, ui_key, "implantchair", name, ui_x, ui_y, master_ui, state)
 		ui.open()
 
 
@@ -76,12 +77,12 @@
 		ready_implants--
 		if(!replenishing && auto_replenish)
 			replenishing = TRUE
-			addtimer(CALLBACK(src,"replenish"),replenish_cooldown)
+			addtimer(CALLBACK(src,.proc/replenish),replenish_cooldown)
 		if(injection_cooldown > 0)
 			ready = FALSE
-			addtimer(CALLBACK(src,"set_ready"),injection_cooldown)
+			addtimer(CALLBACK(src,.proc/set_ready),injection_cooldown)
 	else
-		playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 25, 1)
+		playsound(get_turf(src), 'sound/machines/buzz-sigh.ogg', 25, TRUE)
 	update_icon()
 
 /obj/machinery/implantchair/proc/implant_action(mob/living/M)
@@ -89,24 +90,25 @@
 	if(istype(I, /obj/item/implant))
 		var/obj/item/implant/P = I
 		if(P.implant(M))
-			visible_message("<span class='warning'>[M] has been implanted by [src].</span>")
+			visible_message("<span class='warning'>[M] is implanted by [src].</span>")
 			return TRUE
 	else if(istype(I, /obj/item/organ))
 		var/obj/item/organ/P = I
-		P.Insert(M, drop_if_replaced = FALSE)
-		visible_message("<span class='warning'>[M] has been implanted by [src].</span>")
+		P.Insert(M, FALSE, FALSE)
+		visible_message("<span class='warning'>[M] is implanted by [src].</span>")
 		return TRUE
 
-/obj/machinery/implantchair/update_icon()
+/obj/machinery/implantchair/update_icon_state()
 	icon_state = initial(icon_state)
 	if(state_open)
 		icon_state += "_open"
 	if(occupant)
 		icon_state += "_occupied"
+
+/obj/machinery/implantchair/update_overlays()
+	. = ..()
 	if(ready)
-		add_overlay("ready")
-	else
-		cut_overlays()
+		. += "ready"
 
 /obj/machinery/implantchair/proc/replenish()
 	if(ready_implants < max_implants)
@@ -125,7 +127,7 @@
 	user.last_special = world.time + CLICK_CD_BREAKOUT
 	user.visible_message("<span class='notice'>You see [user] kicking against the door of [src]!</span>", \
 		"<span class='notice'>You lean on the back of [src] and start pushing the door open... (this will take about [DisplayTimeText(breakout_time)].)</span>", \
-		"<span class='italics'>You hear a metallic creaking from [src].</span>")
+		"<span class='hear'>You hear a metallic creaking from [src].</span>")
 	if(do_after(user,(breakout_time), target = src))
 		if(!user || user.stat != CONSCIOUS || user.loc != src || state_open)
 			return
@@ -139,8 +141,12 @@
 		to_chat(user, "<span class='warning'>[src]'s door won't budge!</span>")
 
 /obj/machinery/implantchair/MouseDrop_T(mob/target, mob/user)
-	if(user.stat || user.lying || !Adjacent(user) || !user.Adjacent(target) || !isliving(target) || !user.IsAdvancedToolUser())
+	if(user.stat || !Adjacent(user) || !user.Adjacent(target) || !isliving(target) || !user.IsAdvancedToolUser())
 		return
+	if(isliving(user))
+		var/mob/living/L = user
+		if(!(L.mobility_flags & MOBILITY_STAND))
+			return
 	close_machine(target)
 
 /obj/machinery/implantchair/close_machine(mob/living/user)
@@ -179,17 +185,16 @@
 
 /obj/machinery/implantchair/brainwash/implant_action(mob/living/C,mob/user)
 	if(!istype(C) || !C.mind) // I don't know how this makes any sense for silicons but laws trump objectives anyway.
-		return 0
+		return FALSE
 	if(custom)
 		if(!user || !user.Adjacent(src))
-			return 0
+			return FALSE
 		objective = stripped_input(usr,"What order do you want to imprint on [C]?","Enter the order","",120)
-		message_admins("[key_name_admin(user)] set brainwash machine objective to '[objective]'.")
+		message_admins("[ADMIN_LOOKUPFLW(user)] set brainwash machine objective to '[objective]'.")
 		log_game("[key_name(user)] set brainwash machine objective to '[objective]'.")
-	var/datum/objective/custom_objective = new/datum/objective(objective)
-	custom_objective.owner = C.mind
-	C.mind.objectives += custom_objective
-	C.mind.announce_objectives()
-	message_admins("[key_name_admin(user)] brainwashed [key_name_admin(C)] with objective '[objective]'.")
+	if(HAS_TRAIT(C, TRAIT_MINDSHIELD))
+		return FALSE
+	brainwash(C, objective)
+	message_admins("[ADMIN_LOOKUPFLW(user)] brainwashed [key_name_admin(C)] with objective '[objective]'.")
 	log_game("[key_name(user)] brainwashed [key_name(C)] with objective '[objective]'.")
-	return 1
+	return TRUE

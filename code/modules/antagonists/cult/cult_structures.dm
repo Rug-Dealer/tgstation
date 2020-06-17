@@ -29,10 +29,10 @@
 
 
 /obj/structure/destructible/cult/examine(mob/user)
-	..()
-	to_chat(user, "<span class='notice'>\The [src] is [anchored ? "":"not "]secured to the floor.</span>")
+	. = ..()
+	. += "<span class='notice'>\The [src] is [anchored ? "":"not "]secured to the floor.</span>"
 	if((iscultist(user) || isobserver(user)) && cooldowntime > world.time)
-		to_chat(user, "<span class='cult italic'>The magic in [src] is too weak, [p_they()] will be ready to use again in [DisplayTimeText(cooldowntime - world.time)].</span>")
+		. += "<span class='cult italic'>The magic in [src] is too weak, [p_they()] will be ready to use again in [DisplayTimeText(cooldowntime - world.time)].</span>"
 
 /obj/structure/destructible/cult/examine_status(mob/user)
 	if(iscultist(user) || isobserver(user))
@@ -42,7 +42,7 @@
 	return ..()
 
 /obj/structure/destructible/cult/attack_animal(mob/living/simple_animal/M)
-	if(istype(M, /mob/living/simple_animal/hostile/construct/builder))
+	if(istype(M, /mob/living/simple_animal/hostile/construct/artificer))
 		if(obj_integrity < max_integrity)
 			M.changeNext_move(CLICK_CD_MELEE)
 			obj_integrity = min(max_integrity, obj_integrity + 5)
@@ -50,7 +50,7 @@
 			M.visible_message("<span class='danger'>[M] repairs \the <b>[src]</b>.</span>", \
 				"<span class='cult'>You repair <b>[src]</b>, leaving [p_they()] at <b>[round(obj_integrity * 100 / max_integrity)]%</b> stability.</span>")
 		else
-			to_chat(M, "<span class='cult'>You cannot repair [src], as [p_they()] [p_are()] undamaged!</span>")
+			to_chat(M, "<span class='cult'>You cannot repair [src], as [p_theyre()] undamaged!</span>")
 	else
 		..()
 
@@ -65,21 +65,23 @@
 	else
 		return ..()
 
-/obj/structure/destructible/cult/ratvar_act()
-	if(take_damage(rand(25, 50), BURN) && src) //if we still exist
-		var/previouscolor = color
-		color = "#FAE48C"
-		animate(src, color = previouscolor, time = 8)
-		addtimer(CALLBACK(src, /atom/proc/update_atom_colour), 8)
-
+/obj/structure/destructible/cult/proc/check_menu(mob/user)
+	if(!istype(user))
+		return FALSE
+	if(user.incapacitated() || !user.Adjacent(src))
+		return FALSE
+	return TRUE
 
 /obj/structure/destructible/cult/talisman
 	name = "altar"
-	desc = "A bloodstained altar dedicated to Nar-Sie."
+	desc = "A bloodstained altar dedicated to Nar'Sie."
 	icon_state = "talismanaltar"
 	break_message = "<span class='warning'>The altar shatters, leaving only the wailing of the damned!</span>"
 
 /obj/structure/destructible/cult/talisman/attack_hand(mob/living/user)
+	. = ..()
+	if(.)
+		return
 	if(!iscultist(user))
 		to_chat(user, "<span class='warning'>You're pretty sure you know exactly what this is used for and you can't seem to touch it.</span>")
 		return
@@ -89,7 +91,12 @@
 	if(cooldowntime > world.time)
 		to_chat(user, "<span class='cult italic'>The magic in [src] is weak, it will be ready to use again in [DisplayTimeText(cooldowntime - world.time)].</span>")
 		return
-	var/choice = alert(user,"You study the schematics etched into the altar...",,"Eldritch Whetstone","Construct Shell","Flask of Unholy Water")
+	var/list/items = list(
+		"Eldritch Whetstone" = image(icon = 'icons/obj/kitchen.dmi', icon_state = "cult_sharpener"),
+		"Construct Shell" = image(icon = 'icons/obj/wizard.dmi', icon_state = "construct_cult"),
+		"Flask of Unholy Water" = image(icon = 'icons/obj/drinks.dmi', icon_state = "holyflask")
+		)
+	var/choice = show_radial_menu(user, src, items, custom_check = CALLBACK(src, .proc/check_menu, user), require_near = TRUE, tooltips = TRUE)
 	var/list/pickedtype = list()
 	switch(choice)
 		if("Eldritch Whetstone")
@@ -98,6 +105,8 @@
 			pickedtype += /obj/structure/constructshell
 		if("Flask of Unholy Water")
 			pickedtype += /obj/item/reagent_containers/glass/beaker/unholywater
+		else
+			return
 	if(src && !QDELETED(src) && anchored && pickedtype && Adjacent(user) && !user.incapacitated() && iscultist(user) && cooldowntime <= world.time)
 		cooldowntime = world.time + 2400
 		for(var/N in pickedtype)
@@ -106,13 +115,16 @@
 
 /obj/structure/destructible/cult/forge
 	name = "daemon forge"
-	desc = "A forge used in crafting the unholy weapons used by the armies of Nar-Sie."
+	desc = "A forge used in crafting the unholy weapons used by the armies of Nar'Sie."
 	icon_state = "forge"
 	light_range = 2
 	light_color = LIGHT_COLOR_LAVA
 	break_message = "<span class='warning'>The force breaks apart into shards with a howling scream!</span>"
 
 /obj/structure/destructible/cult/forge/attack_hand(mob/living/user)
+	. = ..()
+	if(.)
+		return
 	if(!iscultist(user))
 		to_chat(user, "<span class='warning'>The heat radiating from [src] pushes you back.</span>")
 		return
@@ -122,27 +134,22 @@
 	if(cooldowntime > world.time)
 		to_chat(user, "<span class='cult italic'>The magic in [src] is weak, it will be ready to use again in [DisplayTimeText(cooldowntime - world.time)].</span>")
 		return
-	var/choice 
-	if(user.mind.has_antag_datum(/datum/antagonist/cult/master))
-		choice = alert(user,"You study the schematics etched into the forge...",,"Shielded Robe","Flagellant's Robe","Bastard Sword")
-	else
-		choice = alert(user,"You study the schematics etched into the forge...",,"Shielded Robe","Flagellant's Robe","Mirror Shield")
+	var/list/items = list(
+		"Shielded Robe" = image(icon = 'icons/obj/clothing/suits.dmi', icon_state = "cult_armor"),
+		"Flagellant's Robe" = image(icon = 'icons/obj/clothing/suits.dmi', icon_state = "cultrobes"),
+		"Mirror Shield" = image(icon = 'icons/obj/shields.dmi', icon_state = "mirror_shield")
+		)
+	var/choice = show_radial_menu(user, src, items, custom_check = CALLBACK(src, .proc/check_menu, user), require_near = TRUE, tooltips = TRUE)
 	var/list/pickedtype = list()
 	switch(choice)
 		if("Shielded Robe")
 			pickedtype += /obj/item/clothing/suit/hooded/cultrobes/cult_shield
 		if("Flagellant's Robe")
 			pickedtype += /obj/item/clothing/suit/hooded/cultrobes/berserker
-		if("Bastard Sword")
-			if((world.time - SSticker.round_start_time) >= 12000)
-				pickedtype += /obj/item/twohanded/required/cult_bastard
-			else
-				cooldowntime = 12000 - (world.time - SSticker.round_start_time)
-				to_chat(user, "<span class='cult italic'>The forge fires are not yet hot enough for this weapon, give it another [DisplayTimeText(cooldowntime)].</span>")
-				cooldowntime = 0
-				return
 		if("Mirror Shield")
 			pickedtype += /obj/item/shield/mirror
+		else
+			return
 	if(src && !QDELETED(src) && anchored && pickedtype && Adjacent(user) && !user.incapacitated() && iscultist(user) && cooldowntime <= world.time)
 		cooldowntime = world.time + 2400
 		for(var/N in pickedtype)
@@ -212,17 +219,19 @@
 
 		last_corrupt = world.time + corrupt_delay
 
-		var/turf/T = safepick(validturfs)
-		if(T)
-			T.ChangeTurf(/turf/open/floor/engine/cult)
-		else
-			var/turf/open/floor/engine/cult/F = safepick(cultturfs)
-			if(F)
-				new /obj/effect/temp_visual/cult/turf/floor(F)
+		if(length(validturfs))
+			var/turf/T = pick(validturfs)
+			if(istype(T, /turf/open/floor/plating))
+				T.PlaceOnTop(/turf/open/floor/engine/cult, flags = CHANGETURF_INHERIT_AIR)
 			else
-				// Are we in space or something? No cult turfs or
-				// convertable turfs?
-				last_corrupt = world.time + corrupt_delay*2
+				T.ChangeTurf(/turf/open/floor/engine/cult, flags = CHANGETURF_INHERIT_AIR)
+		else if (length(cultturfs))
+			var/turf/open/floor/engine/cult/F = pick(cultturfs)
+			new /obj/effect/temp_visual/cult/turf/floor(F)
+		else
+			// Are we in space or something? No cult turfs or
+			// convertable turfs?
+			last_corrupt = world.time + corrupt_delay*2
 
 /obj/structure/destructible/cult/tome
 	name = "archives"
@@ -233,8 +242,11 @@
 	break_message = "<span class='warning'>The books and tomes of the archives burn into ash as the desk shatters!</span>"
 
 /obj/structure/destructible/cult/tome/attack_hand(mob/living/user)
+	. = ..()
+	if(.)
+		return
 	if(!iscultist(user))
-		to_chat(user, "<span class='warning'>All of these books seem to be gibberish.</span>")
+		to_chat(user, "<span class='warning'>These books won't open and it hurts to even try and read the covers.</span>")
 		return
 	if(!anchored)
 		to_chat(user, "<span class='cultitalic'>You need to anchor [src] to the floor with your dagger first.</span>")
@@ -242,16 +254,23 @@
 	if(cooldowntime > world.time)
 		to_chat(user, "<span class='cult italic'>The magic in [src] is weak, it will be ready to use again in [DisplayTimeText(cooldowntime - world.time)].</span>")
 		return
-	var/choice = alert(user,"You flip through the black pages of the archives...",,"Zealot's Blindfold","Shuttle Curse","Veil Walker Set")
+	var/list/items = list(
+		"Zealot's Blindfold" = image(icon = 'icons/obj/clothing/glasses.dmi', icon_state = "blindfold"),
+		"Shuttle Curse" = image(icon = 'icons/obj/cult.dmi', icon_state = "shuttlecurse"),
+		"Veil Walker Set" = image(icon = 'icons/obj/cult.dmi', icon_state = "shifter")
+		)
+	var/choice = show_radial_menu(user, src, items, custom_check = CALLBACK(src, .proc/check_menu, user), require_near = TRUE, tooltips = TRUE)
 	var/list/pickedtype = list()
 	switch(choice)
 		if("Zealot's Blindfold")
 			pickedtype += /obj/item/clothing/glasses/hud/health/night/cultblind
 		if("Shuttle Curse")
-			pickedtype += /obj/item/device/shuttle_curse
+			pickedtype += /obj/item/shuttle_curse
 		if("Veil Walker Set")
-			pickedtype += /obj/item/device/cult_shift
-			pickedtype += /obj/item/device/flashlight/flare/culttorch
+			pickedtype += /obj/item/cult_shift
+			pickedtype += /obj/item/flashlight/flare/culttorch
+		else
+			return
 	if(src && !QDELETED(src) && anchored && pickedtype.len && Adjacent(user) && !user.incapacitated() && iscultist(user) && cooldowntime <= world.time)
 		cooldowntime = world.time + 2400
 		for(var/N in pickedtype)

@@ -30,8 +30,8 @@
 			set_opacity(0) //if we were blocking view, we aren't now because we're fading out
 		stoplag()
 
-/obj/effect/particle_effect/smoke/New()
-	..()
+/obj/effect/particle_effect/smoke/Initialize()
+	. = ..()
 	create_reagents(500)
 	START_PROCESSING(SSobj, src)
 
@@ -93,10 +93,9 @@
 				S.set_opacity(TRUE)
 			newsmokes.Add(S)
 
-	if(newsmokes.len)
-		spawn(1) //the smoke spreads rapidly but not instantly
-			for(var/obj/effect/particle_effect/smoke/SM in newsmokes)
-				SM.spread_smoke()
+	//the smoke spreads rapidly but not instantly
+	for(var/obj/effect/particle_effect/smoke/SM in newsmokes)
+		addtimer(CALLBACK(SM, /obj/effect/particle_effect/smoke.proc/spread_smoke), 1)
 
 
 /datum/effect_system/smoke_spread
@@ -133,13 +132,11 @@
 		M.emote("cough")
 		return 1
 
-/obj/effect/particle_effect/smoke/bad/CanPass(atom/movable/mover, turf/target)
-	if(istype(mover, /obj/item/projectile/beam))
-		var/obj/item/projectile/beam/B = mover
+/obj/effect/particle_effect/smoke/bad/Crossed(atom/movable/AM, oldloc)
+	. = ..()
+	if(istype(AM, /obj/projectile/beam))
+		var/obj/projectile/beam/B = AM
 		B.damage = (B.damage/2)
-	return 1
-
-
 
 /datum/effect_system/smoke_spread/bad
 	effect_type = /obj/effect/particle_effect/smoke/bad
@@ -156,43 +153,51 @@
 /datum/effect_system/smoke_spread/freezing
 	effect_type = /obj/effect/particle_effect/smoke/freezing
 	var/blast = 0
+	var/temperature = 2
+	var/weldvents = TRUE
+	var/distcheck = TRUE
 
 /datum/effect_system/smoke_spread/freezing/proc/Chilled(atom/A)
 	if(isopenturf(A))
 		var/turf/open/T = A
 		if(T.air)
 			var/datum/gas_mixture/G = T.air
-			if(get_dist(T, location) < 2) // Otherwise we'll get silliness like people using Nanofrost to kill people through walls with cold air
-				G.temperature = 2
+			if(!distcheck || get_dist(T, location) < blast) // Otherwise we'll get silliness like people using Nanofrost to kill people through walls with cold air
+				G.temperature = temperature
 			T.air_update_turf()
 			for(var/obj/effect/hotspot/H in T)
 				qdel(H)
-				var/list/G_gases = G.gases
-				if(G_gases[/datum/gas/plasma])
-					G.assert_gas(/datum/gas/nitrogen)
-					G_gases[/datum/gas/nitrogen][MOLES] += (G_gases[/datum/gas/plasma][MOLES])
-					G_gases[/datum/gas/plasma][MOLES] = 0
-					G.garbage_collect()
-		for(var/obj/machinery/atmospherics/components/unary/U in T)
-			if(!isnull(U.welded) && !U.welded) //must be an unwelded vent pump or vent scrubber.
-				U.welded = TRUE
-				U.update_icon()
-				U.visible_message("<span class='danger'>[U] was frozen shut!</span>")
+			var/list/G_gases = G.gases
+			if(G_gases[/datum/gas/plasma])
+				G.assert_gas(/datum/gas/nitrogen)
+				G_gases[/datum/gas/nitrogen][MOLES] += (G_gases[/datum/gas/plasma][MOLES])
+				G_gases[/datum/gas/plasma][MOLES] = 0
+				G.garbage_collect()
+		if (weldvents)
+			for(var/obj/machinery/atmospherics/components/unary/U in T)
+				if(!isnull(U.welded) && !U.welded) //must be an unwelded vent pump or vent scrubber.
+					U.welded = TRUE
+					U.update_icon()
+					U.visible_message("<span class='danger'>[U] is frozen shut!</span>")
 		for(var/mob/living/L in T)
 			L.ExtinguishMob()
 		for(var/obj/item/Item in T)
 			Item.extinguish()
 
-/datum/effect_system/smoke_spread/freezing/set_up(radius = 5, loca, blasting = 0)
+/datum/effect_system/smoke_spread/freezing/set_up(radius = 5, loca, blast_radius = 0)
 	..()
-	blast = blasting
+	blast = blast_radius
 
 /datum/effect_system/smoke_spread/freezing/start()
 	if(blast)
-		for(var/turf/T in RANGE_TURFS(2, location))
+		for(var/turf/T in RANGE_TURFS(blast, location))
 			Chilled(T)
 	..()
 
+/datum/effect_system/smoke_spread/freezing/decon
+	temperature = 293.15
+	distcheck = FALSE
+	weldvents = FALSE
 
 
 /////////////////////////////////////////////
@@ -226,8 +231,6 @@
 		var/fraction = 1/initial(lifetime)
 		for(var/atom/movable/AM in T)
 			if(AM.type == src.type)
-				continue
-			if(T.intact && AM.level == 1) //hidden under the floor
 				continue
 			reagents.reaction(AM, TOUCH, fraction)
 
@@ -265,13 +268,13 @@
 	chemholder = null
 	return ..()
 
-/datum/effect_system/smoke_spread/chem/set_up(datum/reagents/carry = null, radius = 1, loca, silent = 0)
+/datum/effect_system/smoke_spread/chem/set_up(datum/reagents/carry = null, radius = 1, loca, silent = FALSE)
 	if(isturf(loca))
 		location = loca
 	else
 		location = get_turf(loca)
 	amount = radius
-	carry.copy_to(chemholder, 4*carry.total_volume) //The smoke holds 4 times the total reagents volume for balance purposes.
+	carry.copy_to(chemholder, carry.total_volume)
 
 	if(!silent)
 		var/contained = ""
@@ -279,20 +282,19 @@
 			contained += " [reagent] "
 		if(contained)
 			contained = "\[[contained]\]"
-		var/area/A = get_area(location)
 
-		var/where = "[A.name] | [location.x], [location.y]"
-		var/whereLink = "<A HREF='?_src_=holder;[HrefToken()];adminplayerobservecoodjump=1;X=[location.x];Y=[location.y];Z=[location.z]'>[where]</a>"
-
+		var/where = "[AREACOORD(location)]"
 		if(carry.my_atom.fingerprintslast)
 			var/mob/M = get_mob_by_key(carry.my_atom.fingerprintslast)
 			var/more = ""
 			if(M)
-				more = "(<A HREF='?_src_=holder;[HrefToken()];adminmoreinfo=[REF(M)]'>?</a>) (<A HREF='?_src_=holder;[HrefToken()];adminplayerobservefollow=[REF(M)]'>FLW</A>) "
-			message_admins("Smoke: ([whereLink])[contained]. Key: [carry.my_atom.fingerprintslast][more].", 0, 1)
-			log_game("A chemical smoke reaction has taken place in ([where])[contained]. Last associated key is [carry.my_atom.fingerprintslast].")
+				more = "[ADMIN_LOOKUPFLW(M)] "
+			if(!istype(carry.my_atom, /obj/machinery/plumbing))
+				message_admins("Smoke: ([ADMIN_VERBOSEJMP(location)])[contained]. Key: [more ? more : carry.my_atom.fingerprintslast].")
+			log_game("A chemical smoke reaction has taken place in ([where])[contained]. Last touched by [carry.my_atom.fingerprintslast].")
 		else
-			message_admins("Smoke: ([whereLink])[contained]. No associated key.", 0, 1)
+			if(!istype(carry.my_atom, /obj/machinery/plumbing))
+				message_admins("Smoke: ([ADMIN_VERBOSEJMP(location)])[contained]. No associated key.")
 			log_game("A chemical smoke reaction has taken place in ([where])[contained]. No associated key.")
 
 
@@ -322,3 +324,9 @@
 
 /obj/effect/particle_effect/smoke/transparent
 	opaque = FALSE
+
+/proc/do_smoke(range=0, location=null, smoke_type=/obj/effect/particle_effect/smoke)
+	var/datum/effect_system/smoke_spread/smoke = new
+	smoke.effect_type = smoke_type
+	smoke.set_up(range, location)
+	smoke.start()

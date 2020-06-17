@@ -2,22 +2,34 @@
 
 // TODO: Split everything into easy to manage procs.
 
-/obj/item/device/detective_scanner
+/obj/item/detective_scanner
 	name = "forensic scanner"
 	desc = "Used to remotely scan objects and biomass for DNA and fingerprints. Can print a report of the findings."
+	icon = 'icons/obj/device.dmi'
 	icon_state = "forensicnew"
 	w_class = WEIGHT_CLASS_SMALL
-	item_state = "electronic"
+	inhand_icon_state = "electronic"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
-	flags_1 = CONDUCT_1 | NOBLUDGEON_1
-	slot_flags = SLOT_BELT
+	flags_1 = CONDUCT_1
+	item_flags = NOBLUDGEON
+	slot_flags = ITEM_SLOT_BELT
 	var/scanning = 0
 	var/list/log = list()
 	var/range = 8
 	var/view_check = TRUE
+	var/forensicPrintCount = 0
+	actions_types = list(/datum/action/item_action/displayDetectiveScanResults)
 
-/obj/item/device/detective_scanner/attack_self(mob/user)
+/datum/action/item_action/displayDetectiveScanResults
+	name = "Display Forensic Scanner Results"
+
+/datum/action/item_action/displayDetectiveScanResults/Trigger()
+	var/obj/item/detective_scanner/scanner = target
+	if(istype(scanner))
+		scanner.displayDetectiveScanResults(usr)
+
+/obj/item/detective_scanner/attack_self(mob/user)
 	if(log.len && !scanning)
 		scanning = 1
 		to_chat(user, "<span class='notice'>Printing report, please wait...</span>")
@@ -25,17 +37,23 @@
 	else
 		to_chat(user, "<span class='notice'>The scanner has no logs or is in use.</span>")
 
-/obj/item/device/detective_scanner/attack(mob/living/M, mob/user)
+/obj/item/detective_scanner/attack(mob/living/M, mob/user)
 	return
 
-/obj/item/device/detective_scanner/proc/PrintReport()
+/obj/item/detective_scanner/proc/PrintReport()
 	// Create our paper
 	var/obj/item/paper/P = new(get_turf(src))
-	P.name = "paper- 'Scanner Report'"
-	P.info = "<center><font size='6'><B>Scanner Report</B></font></center><HR><BR>"
+
+	//This could be a global count like sec and med record printouts. See GLOB.data_core.medicalPrintCount AKA datacore.dm
+	var frNum = ++forensicPrintCount
+
+	P.name = text("FR-[] 'Forensic Record'", frNum)
+	P.info = text("<center><B>Forensic Record - (FR-[])</B></center><HR><BR>", frNum)
 	P.info += jointext(log, "<BR>")
 	P.info += "<HR><B>Notes:</B><BR>"
 	P.info_links = P.info
+	P.updateinfolinks()
+	P.update_icon()
 
 	if(ismob(loc))
 		var/mob/M = loc
@@ -46,11 +64,12 @@
 	log = list()
 	scanning = 0
 
-/obj/item/device/detective_scanner/afterattack(atom/A, mob/user, params)
+/obj/item/detective_scanner/afterattack(atom/A, mob/user, params)
+	. = ..()
 	scan(A, user)
 	return FALSE
 
-/obj/item/device/detective_scanner/proc/scan(atom/A, mob/user)
+/obj/item/detective_scanner/proc/scan(atom/A, mob/user)
 	set waitfor = 0
 	if(!scanning)
 		// Can remotely scan objects and mobs.
@@ -59,7 +78,7 @@
 
 		scanning = 1
 
-		user.visible_message("\The [user] points the [src.name] at \the [A] and performs a forensic scan.")
+		user.visible_message("<span class='notice'>\The [user] points the [src.name] at \the [A] and performs a forensic scan.</span>")
 		to_chat(user, "<span class='notice'>You scan \the [A]. The scanner is now analysing the results...</span>")
 
 
@@ -103,7 +122,7 @@
 		// We gathered everything. Create a fork and slowly display the results to the holder of the scanner.
 
 		var/found_something = 0
-		add_log("<B>[worldtime2text()][get_timestamp()] - [target_name]</B>", 0)
+		add_log("<B>[station_time_timestamp()][get_timestamp()] - [target_name]</B>", 0)
 
 		// Fingerprints
 		if(length(fingerprints))
@@ -119,7 +138,7 @@
 			add_log("<span class='info'><B>Blood:</B></span>")
 			found_something = 1
 			for(var/B in blood)
-				add_log("Type: <font color='red'>[blood[B]]</font> DNA: <font color='red'>[B]</font>")
+				add_log("Type: <font color='red'>[blood[B]]</font> DNA (UE): <font color='red'>[B]</font>")
 
 		//Fibers
 		if(length(fibers))
@@ -154,7 +173,7 @@
 		scanning = 0
 		return
 
-/obj/item/device/detective_scanner/proc/add_log(msg, broadcast = 1)
+/obj/item/detective_scanner/proc/add_log(msg, broadcast = 1)
 	if(scanning)
 		if(broadcast && ismob(loc))
 			var/mob/M = loc
@@ -165,3 +184,33 @@
 
 /proc/get_timestamp()
 	return time2text(world.time + 432000, ":ss")
+
+/obj/item/detective_scanner/AltClick(mob/living/user)
+	// Best way for checking if a player can use while not incapacitated, etc
+	if(!user.canUseTopic(src, be_close=TRUE))
+		return
+	if(!LAZYLEN(log))
+		to_chat(user, "<span class='notice'>Cannot clear logs, the scanner has no logs.</span>")
+		return
+	if(scanning)
+		to_chat(user, "<span class='notice'>Cannot clear logs, the scanner is in use.</span>")
+		return
+	to_chat(user, "<span class='notice'>The scanner logs are cleared.</span>")
+	log = list()
+
+/obj/item/detective_scanner/examine(mob/user)
+	. = ..()
+	if(LAZYLEN(log) && !scanning)
+		. += "<span class='notice'>Alt-click to clear scanner logs.</span>"
+
+/obj/item/detective_scanner/proc/displayDetectiveScanResults(mob/living/user)
+	// No need for can-use checks since the action button should do proper checks
+	if(!LAZYLEN(log))
+		to_chat(user, "<span class='notice'>Cannot display logs, the scanner has no logs.</span>")
+		return
+	if(scanning)
+		to_chat(user, "<span class='notice'>Cannot display logs, the scanner is in use.</span>")
+		return
+	to_chat(user, "<span class='notice'><B>Scanner Report</B></span>")
+	for(var/iterLog in log)
+		to_chat(user, iterLog)

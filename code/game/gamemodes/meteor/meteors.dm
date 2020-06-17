@@ -82,7 +82,7 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 //////////////////////
 
 /obj/effect/meteor
-	name = "the concept of meteor"
+	name = "\proper the concept of meteor"
 	desc = "You should probably run instead of gawking at this."
 	icon = 'icons/obj/meteor.dmi'
 	icon_state = "small"
@@ -132,10 +132,10 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 	timerid = QDEL_IN(src, lifetime)
 	chase_target(target)
 
-/obj/effect/meteor/Collide(atom/A)
+/obj/effect/meteor/Bump(atom/A)
 	if(A)
 		ram_turf(get_turf(A))
-		playsound(src.loc, meteorsound, 40, 1)
+		playsound(src.loc, meteorsound, 40, TRUE)
 		get_hit()
 
 /obj/effect/meteor/proc/ram_turf(turf/T)
@@ -144,11 +144,23 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 		if(A != src)
 			if(isliving(A))
 				A.visible_message("<span class='warning'>[src] slams into [A].</span>", "<span class='userdanger'>[src] slams into you!.</span>")
-			A.ex_act(hitpwr)
+			switch(hitpwr)
+				if(EXPLODE_DEVASTATE)
+					SSexplosions.highobj += A
+				if(EXPLODE_HEAVY)
+					SSexplosions.medobj += A
+				if(EXPLODE_LIGHT)
+					SSexplosions.lowobj += A
 
 	//then, ram the turf if it still exists
 	if(T)
-		T.ex_act(hitpwr)
+		switch(hitpwr)
+			if(EXPLODE_DEVASTATE)
+				SSexplosions.highturf += T
+			if(EXPLODE_HEAVY)
+				SSexplosions.medturf += T
+			if(EXPLODE_LIGHT)
+				SSexplosions.lowturf += T
 
 
 
@@ -164,17 +176,13 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 /obj/effect/meteor/ex_act()
 	return
 
-#define METEOR_MEDAL "Your Life Before Your Eyes"
-
 /obj/effect/meteor/examine(mob/user)
-	if(!admin_spawned && isliving(user))
-		UnlockMedal(METEOR_MEDAL,user.client)
-	..()
+	. = ..()
+	if(!(flags_1 & ADMIN_SPAWNED_1) && isliving(user))
+		user.client.give_award(/datum/award/achievement/misc/meteor_examine, user)
 
-#undef METEOR_MEDAL
-
-/obj/effect/meteor/attackby(obj/item/W, mob/user, params)
-	if(istype(W, /obj/item/pickaxe))
+/obj/effect/meteor/attackby(obj/item/I, mob/user, params)
+	if(I.tool_behaviour == TOOL_MINING)
 		make_debris()
 		qdel(src)
 	else
@@ -216,7 +224,7 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 	pass_flags = PASSTABLE | PASSGRILLE
 	hits = 1
 	hitpwr = 3
-	meteorsound = 'sound/weapons/gunshot_smg.ogg'
+	meteorsound = 'sound/weapons/gun/smg/shot.ogg'
 	meteordrop = list(/obj/item/stack/ore/glass)
 	threat = 1
 
@@ -305,7 +313,7 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 	if(!isspaceturf(T))
 		new /obj/effect/decal/cleanable/blood(T)
 
-/obj/effect/meteor/meaty/Collide(atom/A)
+/obj/effect/meteor/meaty/Bump(atom/A)
 	A.ex_act(hitpwr)
 	get_hit()
 
@@ -344,7 +352,7 @@ GLOBAL_LIST_INIT(meteorsC, list(/obj/effect/meteor/dust)) //for space dust event
 	..()
 	explosion(src.loc, 5, 10, 15, 20, 0)
 
-/obj/effect/meteor/tunguska/Collide()
+/obj/effect/meteor/tunguska/Bump()
 	..()
 	if(prob(20))
 		explosion(src.loc,2,4,6,8)

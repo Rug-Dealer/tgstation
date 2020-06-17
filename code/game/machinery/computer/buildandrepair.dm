@@ -7,14 +7,14 @@
 	add_fingerprint(user)
 	switch(state)
 		if(0)
-			if(istype(P, /obj/item/wrench))
+			if(P.tool_behaviour == TOOL_WRENCH)
 				to_chat(user, "<span class='notice'>You start wrenching the frame into place...</span>")
 				if(P.use_tool(src, user, 20, volume=50))
 					to_chat(user, "<span class='notice'>You wrench the frame into place.</span>")
-					anchored = TRUE
+					setAnchored(TRUE)
 					state = 1
 				return
-			if(istype(P, /obj/item/weldingtool))
+			if(P.tool_behaviour == TOOL_WELDER)
 				if(!P.tool_start_check(user, amount=0))
 					return
 
@@ -26,17 +26,17 @@
 					qdel(src)
 				return
 		if(1)
-			if(istype(P, /obj/item/wrench))
+			if(P.tool_behaviour == TOOL_WRENCH)
 				to_chat(user, "<span class='notice'>You start to unfasten the frame...</span>")
 				if(P.use_tool(src, user, 20, volume=50))
 					to_chat(user, "<span class='notice'>You unfasten the frame.</span>")
-					anchored = FALSE
+					setAnchored(FALSE)
 					state = 0
 				return
 			if(istype(P, /obj/item/circuitboard/computer) && !circuit)
 				if(!user.transferItemToLoc(P, src))
 					return
-				playsound(src, 'sound/items/deconstruct.ogg', 50, 1)
+				playsound(src, 'sound/items/deconstruct.ogg', 50, TRUE)
 				to_chat(user, "<span class='notice'>You place [P] inside the frame.</span>")
 				icon_state = "1"
 				circuit = P
@@ -46,14 +46,14 @@
 			else if(istype(P, /obj/item/circuitboard) && !circuit)
 				to_chat(user, "<span class='warning'>This frame does not accept circuit boards of this type!</span>")
 				return
-			if(istype(P, /obj/item/screwdriver) && circuit)
-				playsound(src, P.usesound, 50, 1)
+			if(P.tool_behaviour == TOOL_SCREWDRIVER && circuit)
+				P.play_tool_sound(src)
 				to_chat(user, "<span class='notice'>You screw [circuit] into place.</span>")
 				state = 2
 				icon_state = "2"
 				return
-			if(istype(P, /obj/item/crowbar) && circuit)
-				playsound(src, P.usesound, 50, 1)
+			if(P.tool_behaviour == TOOL_CROWBAR && circuit)
+				P.play_tool_sound(src)
 				to_chat(user, "<span class='notice'>You remove [circuit].</span>")
 				state = 1
 				icon_state = "0"
@@ -62,8 +62,8 @@
 				circuit = null
 				return
 		if(2)
-			if(istype(P, /obj/item/screwdriver) && circuit)
-				playsound(src, P.usesound, 50, 1)
+			if(P.tool_behaviour == TOOL_SCREWDRIVER && circuit)
+				P.play_tool_sound(src)
 				to_chat(user, "<span class='notice'>You unfasten the circuit board.</span>")
 				state = 1
 				icon_state = "1"
@@ -71,9 +71,8 @@
 			if(istype(P, /obj/item/stack/cable_coil))
 				if(!P.tool_start_check(user, amount=5))
 					return
-				playsound(src, 'sound/items/deconstruct.ogg', 50, 1)
 				to_chat(user, "<span class='notice'>You start adding cables to the frame...</span>")
-				if(P.use_tool(src, user, 20, amount=5))
+				if(P.use_tool(src, user, 20, volume=50, amount=5))
 					if(state != 2)
 						return
 					to_chat(user, "<span class='notice'>You add cables to the frame.</span>")
@@ -81,8 +80,8 @@
 					icon_state = "3"
 				return
 		if(3)
-			if(istype(P, /obj/item/wirecutters))
-				playsound(src, P.usesound, 50, 1)
+			if(P.tool_behaviour == TOOL_WIRECUTTER)
+				P.play_tool_sound(src)
 				to_chat(user, "<span class='notice'>You remove the cables.</span>")
 				state = 2
 				icon_state = "2"
@@ -93,7 +92,7 @@
 			if(istype(P, /obj/item/stack/sheet/glass))
 				if(!P.tool_start_check(user, amount=2))
 					return
-				playsound(src, 'sound/items/deconstruct.ogg', 50, 1)
+				playsound(src, 'sound/items/deconstruct.ogg', 50, TRUE)
 				to_chat(user, "<span class='notice'>You start to put in the glass panel...</span>")
 				if(P.use_tool(src, user, 20, amount=2))
 					if(state != 3)
@@ -103,19 +102,19 @@
 					src.icon_state = "4"
 				return
 		if(4)
-			if(istype(P, /obj/item/crowbar))
-				playsound(src, P.usesound, 50, 1)
+			if(P.tool_behaviour == TOOL_CROWBAR)
+				P.play_tool_sound(src)
 				to_chat(user, "<span class='notice'>You remove the glass panel.</span>")
 				state = 3
 				icon_state = "3"
 				var/obj/item/stack/sheet/glass/G = new(drop_location(), 2)
 				G.add_fingerprint(user)
 				return
-			if(istype(P, /obj/item/screwdriver))
-				playsound(src, P.usesound, 50, 1)
+			if(P.tool_behaviour == TOOL_SCREWDRIVER)
+				P.play_tool_sound(src)
 				to_chat(user, "<span class='notice'>You connect the monitor.</span>")
 				var/obj/B = new circuit.build_path (loc, circuit)
-				B.dir = dir
+				B.setDir(dir)
 				transfer_fingerprints_to(B)
 				qdel(src)
 				return
@@ -134,7 +133,7 @@
 
 /obj/structure/frame/computer/AltClick(mob/user)
 	..()
-	if(!in_range(src, user) || !isliving(user) || user.incapacitated())
+	if(!isliving(user) || !user.canUseTopic(src, BE_CLOSE, ismonkey(user)))
 		return
 
 	if(anchored)
