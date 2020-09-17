@@ -11,7 +11,7 @@
 
 /datum/eldritch_knowledge/spell/ashen_shift
 	name = "Ashen Shift"
-	gain_text = "Ash is all the same, how can one man master it all?"
+	gain_text = "The Nightwatcher was the first of them, his treason has started it all."
 	desc = "Short range jaunt that can help you escape from bad situations."
 	cost = 1
 	spell_to_add = /obj/effect/proc_holder/spell/targeted/ethereal_jaunt/shift/ash
@@ -20,7 +20,7 @@
 
 /datum/eldritch_knowledge/ashen_grasp
 	name = "Grasp of Ash"
-	gain_text = "Gates have opened, minds have flooded, I remain."
+	gain_text = "He well knew how to walk between the planes."
 	desc = "Empowers your mansus grasp to throw away enemies."
 	cost = 1
 	next_knowledge = list(/datum/eldritch_knowledge/spell/ashen_shift)
@@ -34,6 +34,7 @@
 	var/mob/living/carbon/C = target
 	var/datum/status_effect/eldritch/E = C.has_status_effect(/datum/status_effect/eldritch/rust) || C.has_status_effect(/datum/status_effect/eldritch/ash) || C.has_status_effect(/datum/status_effect/eldritch/flesh)
 	if(E)
+		. = TRUE
 		E.on_effect()
 		for(var/X in user.mind.spell_list)
 			if(!istype(X,/obj/effect/proc_holder/spell/targeted/touch/mansus_grasp))
@@ -42,6 +43,7 @@
 			MG.charge_counter = min(round(MG.charge_counter + MG.charge_max * 0.75),MG.charge_max) // refunds 75% of charge.
 	var/atom/throw_target = get_edge_target_turf(C, user.dir)
 	if(!C.anchored)
+		. = TRUE
 		C.throw_at(throw_target, rand(4,8), 14, user)
 	return
 
@@ -56,7 +58,7 @@
 
 /datum/eldritch_knowledge/ash_mark
 	name = "Mark of ash"
-	gain_text = "Spread the famine."
+	gain_text = "Nightwatcher was a very particular man, always watching, in the night. In spite of his duty, he has tranced through the manse, with his blazing lantern."
 	desc = "Your sickly blade now applies ash mark on hit. Use your mansus grasp to proc the mark. Mark of Ash causes stamina damage, and fire loss, and spreads to a nearby carbon. Damage decreases with how many times the mark has spread."
 	cost = 2
 	next_knowledge = list(/datum/eldritch_knowledge/curse/blindness)
@@ -71,7 +73,7 @@
 
 /datum/eldritch_knowledge/curse/blindness
 	name = "Curse of blindness"
-	gain_text = "Blind man walks through the world, unnoticed by the masses."
+	gain_text = "He walks through the world, unnoticed by the masses."
 	desc = "Curse someone with 2 minutes of complete blindness by sacrificing a pair of eyes, a screwdriver and a pool of blood, with an object that the victim has touched with their bare hands."
 	cost = 1
 	required_atoms = list(/obj/item/organ/eyes,/obj/item/screwdriver,/obj/effect/decal/cleanable/blood)
@@ -87,21 +89,21 @@
 	. = ..()
 	chosen_mob.cure_blind(MAGIC_TRAIT)
 
-/datum/eldritch_knowledge/spell/mad_touch
-	name = "Touch of Madness"
-	gain_text = "Take what's yours."
+/datum/eldritch_knowledge/spell/flame_birth
+	name = "Flame Birth"
+	gain_text = "Nightwatcher was a man of principles, and yet he arose from the chaos he vowed to protect from."
 	desc = "Short range spell that allows you to curse someone with massive sanity loss."
 	cost = 1
-	spell_to_add = /obj/effect/proc_holder/spell/pointed/touch/mad_touch
-	next_knowledge = list(/datum/eldritch_knowledge/spell/blood_siphon,/datum/eldritch_knowledge/summon/ashy,/datum/eldritch_knowledge/final/ash_final)
+	spell_to_add = /obj/effect/proc_holder/spell/targeted/fiery_rebirth
+	next_knowledge = list(/datum/eldritch_knowledge/spell/cleave,/datum/eldritch_knowledge/summon/ashy,/datum/eldritch_knowledge/final/ash_final)
 	route = PATH_ASH
 
 /datum/eldritch_knowledge/ash_blade_upgrade
 	name = "Fiery blade"
-	gain_text = "May the sun burn the heretics."
+	gain_text = "He has swung and swung, the ash fell from the skies, his city... his people, all gone, and yet he was alive in his charred body."
 	desc = "Your blade of choice will now add firestacks."
 	cost = 2
-	next_knowledge = list(/datum/eldritch_knowledge/spell/mad_touch)
+	next_knowledge = list(/datum/eldritch_knowledge/spell/flame_birth)
 	banned_knowledge = list(/datum/eldritch_knowledge/rust_blade_upgrade,/datum/eldritch_knowledge/flesh_blade_upgrade)
 	route = PATH_ASH
 
@@ -155,25 +157,27 @@
 	gain_text = "At first i didn't know these instruments of war, but the priest told me to use them."
 	desc = "Gives AOE spell that causes heavy bleeding and blood loss."
 	cost = 1
-	spell_to_add = /obj/effect/proc_holder/spell/pointed/ash_cleave
-	next_knowledge = list(/datum/eldritch_knowledge/summon/raw_prophet,/datum/eldritch_knowledge/spell/area_conversion)
+	spell_to_add = /obj/effect/proc_holder/spell/pointed/cleave
+	next_knowledge = list(/datum/eldritch_knowledge/spell/entropic_plume,/datum/eldritch_knowledge/spell/flame_birth)
 
 /datum/eldritch_knowledge/final/ash_final
 	name = "Ashlord's rite"
-	gain_text = "The forgotten lords have spoken! The lord of ash have come! Fear the fire!"
+	gain_text = "Nightwacher has found the ascension and shares it between the men! For I am one with the fire, WATCH ME RISE!"
 	desc = "Bring 3 corpses onto a transmutation rune, you will become immune to fire ,space ,cold and other enviromental hazards and become overall sturdier to all other damages. You will gain a spell that passively creates ring of fire around you as well ,as you will gain a powerful abiltiy that let's you create a wave of flames all around you."
 	required_atoms = list(/mob/living/carbon/human)
 	cost = 3
 	route = PATH_ASH
-	var/list/trait_list = list(TRAIT_RESISTHEAT,TRAIT_NOBREATH,TRAIT_RESISTCOLD,TRAIT_RESISTHIGHPRESSURE,TRAIT_RESISTLOWPRESSURE,TRAIT_NOFIRE,TRAIT_RADIMMUNE,TRAIT_PIERCEIMMUNE,TRAIT_NODISMEMBER,TRAIT_BOMBIMMUNE)
+	var/list/trait_list = list(TRAIT_RESISTHEAT,TRAIT_NOBREATH,TRAIT_RESISTCOLD,TRAIT_RESISTHIGHPRESSURE,TRAIT_RESISTLOWPRESSURE,TRAIT_NOFIRE,TRAIT_RADIMMUNE,TRAIT_GENELESS,TRAIT_PIERCEIMMUNE,TRAIT_NODISMEMBER,TRAIT_BOMBIMMUNE)
 
 /datum/eldritch_knowledge/final/ash_final/on_finished_recipe(mob/living/user, list/atoms, loc)
-	priority_announce("$^@&#*$^@(#&$(@&#^$&#^@# Fear the blaze, for Ashbringer [user.real_name] has come! $^@&#*$^@(#&$(@&#^$&#^@#","#$^@&#*$^@(#&$(@&#^$&#^@#", 'sound/ai/spanomalies.ogg')
+	priority_announce("$^@&#*$^@(#&$(@&#^$&#^@# Fear the blaze, for Ashlord [user.real_name] has come! $^@&#*$^@(#&$(@&#^$&#^@#","#$^@&#*$^@(#&$(@&#^$&#^@#", 'sound/ai/spanomalies.ogg')
 	user.mind.AddSpell(new /obj/effect/proc_holder/spell/aoe_turf/fire_cascade/big)
 	user.mind.AddSpell(new /obj/effect/proc_holder/spell/targeted/fire_sworn)
 	var/mob/living/carbon/human/H = user
 	H.physiology.brute_mod *= 0.5
 	H.physiology.burn_mod *= 0.5
+	var/datum/antagonist/heretic/ascension = H.mind.has_antag_datum(/datum/antagonist/heretic)
+	ascension.ascended = TRUE
 	for(var/X in trait_list)
 		ADD_TRAIT(user,X,MAGIC_TRAIT)
 	return ..()

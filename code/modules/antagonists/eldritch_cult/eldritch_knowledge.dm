@@ -88,6 +88,7 @@
 	for(var/X in atoms)
 		var/atom/A = X
 		if(!isliving(A))
+			atoms -= A
 			qdel(A)
 	return
 
@@ -97,7 +98,7 @@
   * Gives addtional effects to mansus grasp spell
   */
 /datum/eldritch_knowledge/proc/on_mansus_grasp(atom/target, mob/user, proximity_flag, click_parameters)
-	return
+	return FALSE
 
 
 /**
@@ -174,7 +175,7 @@
 	//we need to spawn the mob first so that we can use it in pollCandidatesForMob, we will move it from nullspace down the code
 	var/mob/living/summoned = new mob_to_summon(loc)
 	message_admins("[summoned.name] is being summoned by [user.real_name] in [loc]")
-	var/list/mob/dead/observer/candidates = pollCandidatesForMob("Do you want to play as [summoned.name]", ROLE_HERETIC, null, FALSE, 100, summoned)
+	var/list/mob/dead/observer/candidates = pollCandidatesForMob("Do you want to play as [summoned.real_name]", ROLE_HERETIC, null, FALSE, 100, summoned)
 	if(!LAZYLEN(candidates))
 		to_chat(user,"<span class='warning'>No ghost could be found...</span>")
 		qdel(summoned)
@@ -183,6 +184,7 @@
 	log_game("[key_name_admin(C)] has taken control of ([key_name_admin(summoned)]), their master is [user.real_name]")
 	summoned.ghostize(FALSE)
 	summoned.key = C.key
+	summoned.mind.add_antag_datum(/datum/antagonist/heretic_monster)
 	var/datum/antagonist/heretic_monster/heretic_monster = summoned.mind.has_antag_datum(/datum/antagonist/heretic_monster)
 	var/datum/antagonist/heretic/master = user.mind.has_antag_datum(/datum/antagonist/heretic)
 	heretic_monster.set_owner(master)
@@ -210,6 +212,7 @@
 /datum/eldritch_knowledge/final/cleanup_atoms(list/atoms)
 	. = ..()
 	for(var/mob/living/carbon/human/H in atoms)
+		atoms -= H
 		H.gib()
 
 
@@ -220,7 +223,7 @@
 /datum/eldritch_knowledge/spell/basic
 	name = "Break of dawn"
 	desc = "Starts your journey in the mansus. Allows you to select a target using a living heart on a transmutation rune."
-	gain_text = "Gates of mansus open up to your mind."
+	gain_text = "Another day at a meaningless job. You feel a shimmer around you, as a realization of something weird in your backpack unfolds. You look at it, unknowingly opening a new chapter in your life."
 	next_knowledge = list(/datum/eldritch_knowledge/base_rust,/datum/eldritch_knowledge/base_ash,/datum/eldritch_knowledge/base_flesh)
 	cost = 0
 	spell_to_add = /obj/effect/proc_holder/spell/targeted/touch/mansus_grasp
@@ -278,4 +281,13 @@
 	cost = 0
 	required_atoms = list(/obj/item/organ/heart,/obj/effect/decal/cleanable/blood,/obj/item/reagent_containers/food/snacks/grown/poppy)
 	result_atoms = list(/obj/item/living_heart)
+	route = "Start"
+
+/datum/eldritch_knowledge/codex_cicatrix
+	name = "Codex Cicatrix"
+	desc = "Allows you to create a spare Codex Cicatrix if you have lost one, using a bible, human skin, a pen and a pair of eyes."
+	gain_text = "Their hand is at your throats, yet you see Them not."
+	cost = 0
+	required_atoms = list(/obj/item/organ/eyes,/obj/item/stack/sheet/animalhide/human,/obj/item/storage/book/bible,/obj/item/pen)
+	result_atoms = list(/obj/item/forbidden_book)
 	route = "Start"

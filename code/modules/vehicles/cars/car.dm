@@ -18,9 +18,9 @@
 	. = ..()
 	initialize_controller_action_type(/datum/action/vehicle/sealed/remove_key, VEHICLE_CONTROL_DRIVE)
 	if(car_traits & CAN_KIDNAP)
-		initialize_controller_action_type(/datum/action/vehicle/sealed/DumpKidnappedMobs, VEHICLE_CONTROL_DRIVE)
+		initialize_controller_action_type(/datum/action/vehicle/sealed/dump_kidnapped_mobs, VEHICLE_CONTROL_DRIVE)
 
-/obj/vehicle/sealed/car/driver_move(mob/user, direction)
+/obj/vehicle/sealed/car/driver_move(mob/living/user, direction)
 	if(key_type && !is_key(inserted_key))
 		to_chat(user, "<span class='warning'>[src] has no key inserted!</span>")
 		return FALSE

@@ -16,7 +16,7 @@
 	speed = 0
 	a_intent = INTENT_HARM
 	stop_automated_movement = 1
-	AIStatus = AI_ON
+	AIStatus = AI_OFF
 	attack_sound = 'sound/weapons/punch1.ogg'
 	see_in_dark = 7
 	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
@@ -30,14 +30,13 @@
 	del_on_death = TRUE
 	deathmessage = "implodes into itself"
 	faction = list("heretics")
+	simple_mob_flags = SILENCE_RANGED_MESSAGE
 	///Innate spells that are supposed to be added when a beast is created
 	var/list/spells_to_add
 
 /mob/living/simple_animal/hostile/eldritch/Initialize()
 	. = ..()
 	add_spells()
-	//by default
-	mind.add_antag_datum(/datum/antagonist/heretic_monster)
 
 /**
   * Add_spells
@@ -60,11 +59,54 @@
 	maxHealth = 50
 	health = 50
 	sight = SEE_MOBS|SEE_OBJS|SEE_TURFS
-	spells_to_add = list(/obj/effect/proc_holder/spell/targeted/ethereal_jaunt/shift/ash/long,/obj/effect/proc_holder/spell/targeted/telepathy/eldritch)
+	spells_to_add = list(/obj/effect/proc_holder/spell/targeted/ethereal_jaunt/shift/ash/long,/obj/effect/proc_holder/spell/pointed/manse_link,/obj/effect/proc_holder/spell/targeted/telepathy/eldritch,/obj/effect/proc_holder/spell/pointed/trigger/blind/eldritch)
+
+	var/list/linked_mobs = list()
+
+/mob/living/simple_animal/hostile/eldritch/raw_prophet/Initialize()
+	. = ..()
+	link_mob(src)
 
 /mob/living/simple_animal/hostile/eldritch/raw_prophet/Login()
 	. = ..()
-	client?.view_size.setTo(11)
+	client?.view_size.setTo(10)
+
+/mob/living/simple_animal/hostile/eldritch/raw_prophet/proc/link_mob(mob/living/mob_linked)
+	if(QDELETED(mob_linked) || mob_linked.stat == DEAD)
+		return FALSE
+	if(HAS_TRAIT(mob_linked, TRAIT_MINDSHIELD)) //mindshield implant, no dice
+		return FALSE
+	if(mob_linked.anti_magic_check(FALSE, FALSE, TRUE, 0))
+		return FALSE
+	if(linked_mobs[mob_linked])
+		return FALSE
+
+	to_chat(mob_linked, "<span class='notice'>You feel something new enter your sphere of mind, you hear whispers of people far away, screeches of horror and a huming of welcome to [src]'s Mansus Link.</span>")
+	var/datum/action/innate/mansus_speech/action = new(src)
+	linked_mobs[mob_linked] = action
+	action.Grant(mob_linked)
+	RegisterSignal(mob_linked, list(COMSIG_MOB_DEATH, COMSIG_PARENT_QDELETING), .proc/unlink_mob)
+	return TRUE
+
+/mob/living/simple_animal/hostile/eldritch/raw_prophet/proc/unlink_mob(mob/living/mob_linked)
+	SIGNAL_HANDLER
+
+	if(!linked_mobs[mob_linked])
+		return
+	UnregisterSignal(mob_linked, list(COMSIG_MOB_DEATH, COMSIG_PARENT_QDELETING))
+	var/datum/action/innate/mansus_speech/action = linked_mobs[mob_linked]
+	action.Remove(mob_linked)
+	qdel(action)
+	to_chat(mob_linked, "<span class='notice'>Your mind shatters as the [src]'s Mansus Link leaves your mind.</span>")
+	mob_linked.emote("Scream")
+	//micro stun
+	mob_linked.AdjustParalyzed(0.5 SECONDS)
+	linked_mobs -= mob_linked
+
+/mob/living/simple_animal/hostile/eldritch/raw_prophet/death(gibbed)
+	for(var/linked_mob in linked_mobs)
+		unlink_mob(linked_mob)
+	return ..()
 
 /mob/living/simple_animal/hostile/eldritch/armsy
 	name = "Terror of the night"
@@ -77,7 +119,11 @@
 	melee_damage_lower = 10
 	melee_damage_upper = 15
 	move_resist = MOVE_FORCE_OVERPOWERING+1
+	movement_type = GROUND
 	spells_to_add = list(/obj/effect/proc_holder/spell/targeted/worm_contract)
+	ranged_cooldown_time = 5
+	ranged = TRUE
+	rapid = 1
 	///Previous segment in the chain
 	var/mob/living/simple_animal/hostile/eldritch/armsy/back
 	///Next segment in the chain
@@ -131,6 +177,11 @@
 			prev.front = next
 			prev.AIStatus = AI_OFF
 		next = prev
+
+//we are literally a vessel of otherworldly destruction, we bring our own gravity unto this plane
+/mob/living/simple_animal/hostile/eldritch/armsy/has_gravity(turf/T)
+	return TRUE
+
 
 /mob/living/simple_animal/hostile/eldritch/armsy/can_be_pulled()
 	return FALSE
@@ -189,6 +240,12 @@
 
 	adjustBruteLoss(-maxHealth * 0.5, FALSE)
 	adjustFireLoss(-maxHealth * 0.5 ,FALSE)
+
+
+/mob/living/simple_animal/hostile/eldritch/armsy/Shoot(atom/targeted_atom)
+	target = targeted_atom
+	AttackingTarget()
+
 
 /mob/living/simple_animal/hostile/eldritch/armsy/AttackingTarget()
 	if(istype(target,/obj/item/bodypart/r_arm) || istype(target,/obj/item/bodypart/l_arm))
@@ -285,7 +342,7 @@
 	melee_damage_lower = 15
 	melee_damage_upper = 20
 	sight = SEE_TURFS
-	spells_to_add = list(/obj/effect/proc_holder/spell/targeted/ethereal_jaunt/shift/ash,/obj/effect/proc_holder/spell/pointed/ash_cleave/long,/obj/effect/proc_holder/spell/aoe_turf/fire_cascade)
+	spells_to_add = list(/obj/effect/proc_holder/spell/targeted/ethereal_jaunt/shift/ash,/obj/effect/proc_holder/spell/pointed/cleave/long,/obj/effect/proc_holder/spell/aoe_turf/fire_cascade)
 
 /mob/living/simple_animal/hostile/eldritch/stalker
 	name = "Flesh Stalker"

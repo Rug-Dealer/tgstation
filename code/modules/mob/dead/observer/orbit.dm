@@ -6,9 +6,12 @@
 		qdel(src)
 	owner = new_owner
 
-/datum/orbit_menu/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.observer_state)
+/datum/orbit_menu/ui_state(mob/user)
+	return GLOB.observer_state
+
+/datum/orbit_menu/ui_interact(mob/user, datum/tgui/ui)
 	if (!ui)
-		ui = new(user, src, ui_key, "Orbit", "Orbit", 350, 700, master_ui, state)
+		ui = new(user, src, "Orbit")
 		ui.open()
 
 /datum/orbit_menu/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -16,11 +19,10 @@
 		return
 
 	if (action == "orbit")
-		var/list/pois = getpois(skip_mindless = 1)
-		var/atom/movable/poi = pois[params["name"]]
+		var/ref = params["ref"]
+		var/atom/movable/poi = (locate(ref) in GLOB.mob_list) || (locate(ref) in GLOB.poi_list)
 		if (poi != null)
 			owner.ManualFollow(poi)
-			ui.close()
 
 /datum/orbit_menu/ui_data(mob/user)
 	var/list/data = list()
@@ -39,6 +41,8 @@
 
 		var/poi = pois[name]
 
+		serialized["ref"] = REF(poi)
+
 		var/mob/M = poi
 		if (istype(M))
 			if (isobserver(M))
@@ -48,7 +52,7 @@
 			else if (M.mind == null)
 				npcs += list(serialized)
 			else
-				var/number_of_orbiters = M.orbiters?.orbiters?.len
+				var/number_of_orbiters = M.orbiters?.orbiter_list?.len
 				if (number_of_orbiters)
 					serialized["orbiters"] = number_of_orbiters
 
@@ -76,3 +80,7 @@
 	data["npcs"] = npcs
 
 	return data
+
+/datum/orbit_menu/ui_assets()
+	. = ..() || list()
+	. += get_asset_datum(/datum/asset/simple/orbit)
